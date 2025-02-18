@@ -1,5 +1,9 @@
 :root {
   --background-color: var(--p-gray-300);
+  --main-background-color: #fff;
+  --inverter-background-color: #000;
+  --sidebar-color: var(--p-slate-50);
+  --sidebar-color-item-hover: var(--p-slate-200);
 
   --p-primary-color: var(--p-emerald-500) !important;
   --p-primary-hover-color: var(--p-emerald-700) !important;
@@ -8,6 +12,10 @@
 
 .dark-mode {
   --background-color: var(--p-gray-950);
+  --main-background-color: #000;
+  --inverter-background-color: #fff;
+  --sidebar-color: var(--p-gray-900);
+  --sidebar-color-item-hover: var(--p-slate-500);
 
   --p-primary-color: var(--p-green-500) !important;
   --p-primary-hover-color: var(--p-green-400) !important;
