@@ -12,15 +12,13 @@ const navigateTo = (route: string) => {
 
 <template>
   <div>
-    <Sidebar>
-      <ul class="menu-list">
-        <li v-for="(item, index) in Routers" @click="navigateTo(item.path)" v-tooltip="'Dashboards'">
-          <div :class="'menu-item ' + (item.path === $route.path ? ' active' : '')">
-            <i :class="'pi ' + item.icon"></i>
-          </div>
-        </li>
-      </ul>
-    </Sidebar>
+    <ul class="menu-list">
+      <li v-for="(item, index) in Routers" @click="navigateTo(item.path)" v-tooltip="'Dashboards'">
+        <div :class="'menu-item ' + (item.path === $route.path ? ' active' : '')">
+          <i :class="'pi ' + item.icon"></i>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 

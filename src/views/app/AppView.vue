@@ -2,7 +2,6 @@
 import { useRoute } from 'vue-router'
 import Header from '@/components/Header.vue';
 import SidebarMenu from '@/components/SidebarMenu.vue';
-import Config from '@/components/Config.vue';
 
 const route = useRoute()
 

@@ -1,5 +1,15 @@
-import type { off } from "process"
-
+export type request = {
+  limit?: number,
+  offset?: number,
+  order?: {
+    cols: (keyof Bills)[],
+    direction: "ASC" | "DESC"
+  },
+  date_ranger?: {
+    start_date: string,
+    end_date: string
+  }
+}
 export interface User {
   id: number,
   nome: string,
@@ -9,7 +19,6 @@ export interface User {
   dthr_atualizacao: string
 }
 
-
 export interface Config {
   darkMode: boolean
 }
@@ -18,12 +27,13 @@ export interface Bills {
   id?: number,
   id_usuario: number,
   id_forma_pagamento?: number,
+  id_conta_bancaria?: number,
   titulo: string,
   descricao: string,
   valor: number,
   valor_pago: number,
   tipo: "D" | "R",
-  status: "PN" | "PG",
+  status: "PN" | "PA",
   vencimento: string,
   parcelas?: number,
   num_parcela?: number,
@@ -40,16 +50,50 @@ export interface Bills {
 
 export type PartialBills = Partial<Bills>;
 
-export interface BillsRequest {
-  filter?: PartialBills,
-  limit?: number,
-  offset?: number,
-  order?: {
-    cols: (keyof Bills)[],
-    order: "ASC" | "DESC"
+export interface BillsRequest extends request {
+  filter?: PartialBills
+}
+
+export type ResumeBills = {
+  total_falta_pagar: number,
+  total_falta_receber: number,
+  total_despesas: number,
+  total_receitas: number,
+}
+
+export type PaymentsForms = {
+  id: number,
+  descricao: "DINHEIRO" | "CARTÃO DE CRÉDITO" | "CARTÃO DE DÉBITO" | "PIX",
+}
+
+export interface BankAccounts {
+  id: number,
+  id_user: number,
+  user: number,
+  descricao: string,
+  observacoes: string,
+  saldo: number,
+  principal: "S" | "N",
+  deletado: "S" | "N",
+}
+
+export type PartialBankAccounts = Partial<BankAccounts>;
+
+export interface BankAccountsRequest extends request {
+  filter?: PartialBankAccounts,
+}
+
+export type FilterBill = {
+  period: {
+    label: string,
+    value: 1 | 2 | 3
   },
-  date_ranger?: {
-    start_date: string,
-    end_date: string
-  }
+  month: {
+    label: string,
+    value: number
+  },
+  radioTypeFilterPeriod: 'mounth' | 'date',
+  statusFilter: 'TO' | 'PN' | 'PA',
+  type: 'TO' | 'D' | 'R',
+  datePeriod: Date[]
 }

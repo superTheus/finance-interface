@@ -15,6 +15,8 @@ const config = useConfigStore();
 const isDarkMode = ref(config.config?.darkMode);
 const dialog = useDialog();
 
+const visibleConfig = ref(false);
+
 const changeTheme = () => {
   isDarkMode.value = !isDarkMode.value;
   if (isDarkMode.value) {
@@ -62,6 +64,14 @@ const openConfig = () => {
       v-tooltip="isDarkMode ? 'Tema claro' : 'Tema escuro'" />
     <Button icon="pi pi-cog" aria-label="Dark Mode" class="btn" v-tooltip="'Configurações'" @click="openConfig" />
   </div>
+
+
+  <Drawer v-model:visible="visibleConfig" header="Configurações" position="right">
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+      magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+      consequat.</p>
+  </Drawer>
+
 </template>
 
 <style scoped></style>

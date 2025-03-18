@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import Card from 'primevue/card';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import InputGroup from 'primevue/inputgroup';
-import InputGroupAddon from 'primevue/inputgroupaddon';
-
-import { onMounted, ref } from 'vue';
-import { Api } from '@/services/api';
+import { ref } from 'vue';
 import { useToast } from 'primevue';
-import router from '@/router';
 import { useUserStore } from '@/stores/user';
+
+import { Api } from '@/services/api';
+import router from '@/router';
+
+import Card from 'primevue/card';
 
 const email = ref('');
 const pass = ref('');
@@ -36,8 +33,6 @@ const login = async () => {
       life: 3000,
     });
 
-    console.log(userStore);
-
     userStore.setUser(data);
     router.push({ name: 'Dashboard' });
   } catch (error: any) {
@@ -51,10 +46,6 @@ const login = async () => {
     loading.value = false;
   }
 };
-
-onMounted(() => {
-  console.log(userStore);
-});
 
 </script>
 

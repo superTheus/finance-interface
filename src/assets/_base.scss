@@ -8,6 +8,12 @@
   --p-primary-color: var(--p-emerald-500) !important;
   --p-primary-hover-color: var(--p-emerald-700) !important;
   --p-primary-active-color: var(--p-emerald-600) !important;
+
+  --bg-danger: var(--p-red-100) !important;
+  --bg-green: var(--p-green-100) !important;
+
+  --text-danger: var(--p-red-500) !important;
+  --text-success: var(--p-green-500) !important;
 }
 
 .dark-mode {
@@ -20,6 +26,12 @@
   --p-primary-color: var(--p-green-500) !important;
   --p-primary-hover-color: var(--p-green-400) !important;
   --p-primary-active-color: var(--p-emerald-600) !important;
+
+  --bg-danger: var(--p-red-800) !important;
+  --bg-green: var(--p-green-800) !important;
+
+  --text-danger: var(--p-red-300) !important;
+  --text-success: var(--p-green-300) !important;
 }
 
 *,

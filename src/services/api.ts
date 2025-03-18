@@ -1,4 +1,4 @@
-import type { Bills, BillsRequest, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBills, PaymentsForms, ResumeBills, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -27,14 +27,78 @@ export class Api {
     })
   }
 
-  findBills(filters?: BillsRequest): Promise<Bills[]> {
-    return new Promise<Bills[]>(async (resolve, reject) => {
+  findBills(filters?: BillsRequest): Promise<{
+    total: number,
+    data: Bills[]
+  }> {
+    return new Promise<{
+      total: number,
+      data: Bills[]
+    }>(async (resolve, reject) => {
       try {
         const response = await this.instance.post('/contas/list', filters);
-
-        resolve(response.data.data);
+        resolve(response.data);
       } catch (error: any) {
         reject(error.response.data);
+      }
+    })
+  }
+
+  updateBills(id: number, bill: PartialBills): Promise<Bills> {
+    return new Promise<Bills>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.put(`/contas/update/${id}`, bill);
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response.data);
+      }
+    })
+  }
+
+  resumes(data: {
+    date_ranger: {
+      start_date: string,
+      end_date: string
+    },
+    filter: PartialBills
+  }): Promise<ResumeBills> {
+    return new Promise<ResumeBills>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/resumes/values', data);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  payments(): Promise<PaymentsForms[]> {
+    return new Promise<PaymentsForms[]>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.get('/payments-forms');
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  findBankAccounts(filter: BankAccountsRequest): Promise<{
+    total: number,
+    data: BankAccounts[]
+  }> {
+    return new Promise<{
+      total: number,
+      data: BankAccounts[]
+    }>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/bank-account/list', filter);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
       }
     })
   }

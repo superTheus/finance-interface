@@ -111,3 +111,31 @@
   grid-area: main;
   padding: 1rem;
 }
+
+.card-resume {
+  width: 100%;
+
+  &_danger {
+    background-color: var(--bg-danger) !important;
+    color: var(--inverter-background-color) !important;
+  }
+
+  &_green {
+    background-color: var(--bg-green) !important;
+    color: var(--inverter-background-color) !important;
+  }
+}
+
+.text-danger {
+  color: var(--text-danger) !important;
+}
+
+.text-success {
+  color: var(--text-success) !important;
+}
+
+@media screen and (max-width: 768px) {
+  .card-resume {
+    width: 45%;
+  }
+}
