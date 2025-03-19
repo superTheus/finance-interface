@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
 :root {
   --background-color: var(--p-gray-300);
   --main-background-color: #fff;
@@ -13,7 +15,11 @@
   --bg-green: var(--p-green-100) !important;
 
   --text-danger: var(--p-red-500) !important;
-  --text-success: var(--p-green-500) !important;
+  --text-success: var(--p-green-700) !important;
+
+  --main-container-bg: var(--p-slate-100) !important;
+
+  --gradint-container: radial-gradient(circle, rgba(0, 128, 0, 0.3) 0%, rgba(0, 128, 0, 0) 70%);
 }
 
 .dark-mode {
@@ -32,6 +38,9 @@
 
   --text-danger: var(--p-red-300) !important;
   --text-success: var(--p-green-300) !important;
+
+  --main-container-bg: var(--p-slate-900) !important;
+  --gradint-container: radial-gradient(circle, rgba(0, 255, 0, 0.3) 0%, rgba(0, 255, 0, 0) 70%);
 }
 
 *,
@@ -51,6 +60,7 @@ body {
     background-color 0.5s;
   line-height: 1.6;
   font-family:
+    "Montserrat",
     Inter,
     -apple-system,
     BlinkMacSystemFont,
@@ -64,6 +74,8 @@ body {
     'Helvetica Neue',
     sans-serif;
   font-size: 15px;
+  font-optical-sizing: auto;
+  font-style: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

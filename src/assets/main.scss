@@ -1,18 +1,23 @@
 @use './base' as base;
 
-.login-container {
-  padding: 2rem;
+.container {
   width: 100vw;
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: var(--background-color);
-  transition: background-color 0.3s ease-in-out;
+  background-color: var(--main-container-bg);
+  position: relative;
+  overflow: hidden;
 
-  .simple-link {
-    text-decoration: none;
-    color: var(--p-primary-color);
+  &::after {
+    content: '';
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: var(--gradint-container);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: blur(100px);
   }
 }
 
@@ -132,6 +137,14 @@
 
 .text-success {
   color: var(--text-success) !important;
+}
+
+.text-small {
+  font-size: 0.8rem;
+}
+
+.text-strong {
+  font-weight: 700;
 }
 
 @media screen and (max-width: 768px) {
