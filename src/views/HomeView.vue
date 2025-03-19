@@ -185,7 +185,7 @@ const changeTheme = () => {
       border-radius: 2rem;
       background-color: var(--main-background-color);
       height: 100%;
-      padding: 5rem;
+      padding: 2rem 2rem 0.5rem 2rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -205,7 +205,7 @@ const changeTheme = () => {
       width: 100%;
       height: 100%;
 
-      max-height: 350px;
+      max-height: 150px;
     }
   }
 }

@@ -8,7 +8,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <div class="app-grid">
+  <div class="container app-grid">
     <header class="header">
       <Header :current-page="String(route.name || '')" />
     </Header>

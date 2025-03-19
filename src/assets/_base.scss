@@ -20,6 +20,7 @@
   --main-container-bg: var(--p-slate-100) !important;
 
   --gradint-container: radial-gradient(circle, rgba(0, 128, 0, 0.3) 0%, rgba(0, 128, 0, 0) 70%);
+  --card-main-background: rgba(255, 255, 255, 0.7);
 }
 
 .dark-mode {
@@ -41,6 +42,7 @@
 
   --main-container-bg: var(--p-slate-900) !important;
   --gradint-container: radial-gradient(circle, rgba(0, 255, 0, 0.3) 0%, rgba(0, 255, 0, 0) 70%);
+  --card-main-background: rgba(24, 24, 27, 0.7);
 }
 
 *,

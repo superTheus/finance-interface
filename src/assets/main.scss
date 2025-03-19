@@ -49,6 +49,8 @@
   justify-content: space-between;
   align-items: center;
 
+  z-index: 10;
+
   .btn {
     background-color: var(--main-background-color);
     color: var(--inverter-background-color);
@@ -75,10 +77,12 @@
   grid-area: sidebar;
   padding: 0.5rem;
 
+  z-index: 10;
+
   div {
     padding: 1rem;
     background-color: var(--sidebar-color);
-    height: 100%;
+    height: 93vh;
     border-radius: 10px;
 
     ul {
@@ -115,6 +119,8 @@
 .main-content {
   grid-area: main;
   padding: 1rem;
+  overflow: auto;
+  z-index: 10;
 }
 
 .card-resume {
@@ -147,8 +153,22 @@
   font-weight: 700;
 }
 
+.card-main {
+  background: var(--card-main-background) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  box-shadow: 0 4px 6px hex-to-rgba(var(--p-card-shadow)) !important;
+}
+
 @media screen and (max-width: 768px) {
   .card-resume {
     width: 45%;
   }
+}
+
+@function hex-to-rgba($hex, $alpha) {
+  $r: red($hex);
+  $g: green($hex);
+  $b: blue($hex);
+  @return rgba($r, $g, $b, $alpha);
 }

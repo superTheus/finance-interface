@@ -346,7 +346,7 @@ watch(filter, () => {
 </script>
 
 <template>
-  <Card>
+  <Card class="card-main">
     <template #title>
       <h3>Contas</h3>
 
