@@ -27,7 +27,7 @@ const filter = ref<BillsRequest>({
   filter: {
     id_usuario: user.user?.id || 0
   },
-  limit: 10,
+  limit: 5,
   offset: 0,
   date_ranger: {
     start_date: moment().startOf('month').format('YYYY-MM-DD'),
@@ -58,7 +58,10 @@ const resumeBills = ref<ResumeBills>({
   total_falta_pagar: 0,
   total_falta_receber: 0,
   total_receitas: 0,
-  total_despesas: 0
+  total_despesas: 0,
+  total_recebido: 0,
+  total_pago: 0,
+  saldo: 0
 });
 
 const items = ref<{
@@ -116,7 +119,10 @@ function loadResumes() {
       total_falta_pagar: 0,
       total_falta_receber: 0,
       total_receitas: 0,
-      total_despesas: 0
+      total_despesas: 0,
+      total_recebido: 0,
+      total_pago: 0,
+      saldo: 0
     };
   });
 }
@@ -236,8 +242,8 @@ const applyFilter = (filterSelected: FilterBill) => {
       }
     });
     currentFilters.date_ranger = {
-      start_date: moment().subtract(1, 'month').startOf('month').format('YYYY-MM-DD'),
-      end_date: moment().subtract(1, 'month').endOf('month').format('YYYY-MM-DD')
+      start_date: moment().add(1, 'month').startOf('month').format('YYYY-MM-DD'),
+      end_date: moment().add(1, 'month').endOf('month').format('YYYY-MM-DD')
     }
   } else if (filterSelected.period.value === 3) {
     if (filterSelected.radioTypeFilterPeriod === 'mounth') {

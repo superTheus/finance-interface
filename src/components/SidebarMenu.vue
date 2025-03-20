@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Routers } from '@/constants/routers';
-import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -13,7 +12,7 @@ const navigateTo = (route: string) => {
 <template>
   <div>
     <ul class="menu-list">
-      <li v-for="(item, index) in Routers" @click="navigateTo(item.path)" v-tooltip="'Dashboards'">
+      <li v-for="(item, index) in Routers" @click="navigateTo(item.path)" v-tooltip.right="item.name" :key="index">
         <div :class="'menu-item ' + (item.path === $route.path ? ' active' : '')">
           <i :class="'pi ' + item.icon"></i>
         </div>

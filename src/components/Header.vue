@@ -61,8 +61,8 @@ const openConfig = () => {
   </div>
   <div class="flex gap-1">
     <Button :icon="isDarkMode ? 'pi pi-moon' : 'pi pi-sun'" aria-label="Dark Mode" class="btn" @click="changeTheme"
-      v-tooltip="isDarkMode ? 'Tema claro' : 'Tema escuro'" />
-    <Button icon="pi pi-cog" aria-label="Dark Mode" class="btn" v-tooltip="'Configurações'" @click="openConfig" />
+      v-tooltip.left="isDarkMode ? 'Tema claro' : 'Tema escuro'" />
+    <Button icon="pi pi-cog" aria-label="Dark Mode" class="btn" v-tooltip.left="'Configurações'" @click="openConfig" />
   </div>
 
 

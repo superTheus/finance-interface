@@ -44,7 +44,7 @@
 .header {
   grid-area: header;
   padding: 1rem;
-
+  background-color: transparent;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -82,7 +82,7 @@
   div {
     padding: 1rem;
     background-color: var(--sidebar-color);
-    height: 93vh;
+    height: 100%;
     border-radius: 10px;
 
     ul {

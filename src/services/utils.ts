@@ -18,4 +18,22 @@ export class Utils {
   public formatDate(date: string): string {
     return moment(date).format('DD/MM/YYYY');
   }
+
+  public getRangeDate(dateInit: string, dateEnd: string) {
+    return moment(dateEnd).diff(moment(dateInit), 'days');
+  }
+
+  public getDaysInMonth(month: number, year: number) {
+    const daysInMonth = moment(`${year}-${month}`, 'YYYY-MM').daysInMonth();
+    const daysArray = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      daysArray.push({
+        label: moment(`${year}-${month}-${day}`, 'YYYY-MM-DD').format('DD/MM'),
+        value: day
+      });
+    }
+
+    return daysArray;
+  }
 }

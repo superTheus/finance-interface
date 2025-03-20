@@ -7,7 +7,7 @@ import { mounths } from '@/constants/constants';
 const filtersOptions = ref({
   options: [
     { label: 'Mês Atual', value: 1 },
-    { label: 'Mês Anterior', value: 2 },
+    { label: 'Próximo Mês', value: 2 },
     { label: 'Persornalizado', value: 3 }
   ],
   mounths: mounths

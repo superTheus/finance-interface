@@ -59,6 +59,9 @@ export type ResumeBills = {
   total_falta_receber: number,
   total_despesas: number,
   total_receitas: number,
+  total_pago: number,
+  total_recebido: number,
+  saldo: number,
 }
 
 export type PaymentsForms = {

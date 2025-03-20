@@ -1,5 +1,6 @@
 import Aura from '@primevue/themes/aura';
 import { Badge, Button, Card, Carousel, Chip, Column, DataTable, DatePicker, Dialog, DialogService, Divider, Drawer, InputGroup, InputGroupAddon, InputText, Paginator, RadioButton, Select, SelectButton, SplitButton, TieredMenu, ToastService, ToggleSwitch, Tooltip } from 'primevue';
+import Chart from 'primevue/chart';
 import PrimeVue from 'primevue/config';
 import type { App } from 'vue';
 
@@ -15,7 +16,7 @@ const options = {
 const components = [
   Button, InputText, InputGroup, InputGroupAddon, DataTable, Column, Card, Badge,
   DatePicker, Drawer, TieredMenu, Dialog, Divider, ToggleSwitch, SelectButton,
-  Select, RadioButton, SplitButton, Paginator, Chip, Carousel
+  Select, RadioButton, SplitButton, Paginator, Chip, Carousel, Chart
 ];
 const services = [DialogService, ToastService];
 const directives = [{
