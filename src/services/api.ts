@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBills, PaymentsForms, ResumeBills, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBankAccounts, PartialBills, PaymentsForms, ResumeBills, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -95,6 +95,30 @@ export class Api {
     }>(async (resolve, reject) => {
       try {
         const response = await this.instance.post('/bank-account/list', filter);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  createBankAccount(data: PartialBankAccounts): Promise<BankAccounts> {
+    return new Promise<BankAccounts>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/bank-account/create', data);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  updateBankAccount(id: number, data: PartialBankAccounts): Promise<BankAccounts> {
+    return new Promise<BankAccounts>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.put(`/bank-account/update/${id}`, data);
 
         resolve(response.data);
       } catch (error: any) {

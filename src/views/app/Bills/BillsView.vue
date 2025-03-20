@@ -2,7 +2,7 @@
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
 import type { BankAccounts, Bills, BillsRequest, FilterBill, PaymentsForms, ResumeBills } from '@/types/types';
-import { onMounted, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import moment from 'moment';
 import { Utils } from '@/services/utils';
 import ModalFilters from '@/components/ModalFilters.vue';
@@ -166,137 +166,74 @@ const applyFilter = (filterSelected: FilterBill) => {
   const currentFilters = { ...filter.value }
   ChipsFilter.value = [];
 
-  if (filterSelected.statusFilter === 'TO') {
-    delete currentFilters.filter?.status;
-  } else {
+  const addChip = (label: string, data: FilterBill, key: string, resetValue: any) => {
     ChipsFilter.value.push({
-      label: `${filterSelected.statusFilter === 'PA' ? 'PagoS' : 'PendenteS'}`,
-      data: filterSelected,
+      label,
+      data,
       remove: () => {
-        ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.statusFilter !== filterSelected.statusFilter);
+        ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data[key as keyof FilterBill] !== data[key as keyof FilterBill]);
         applyFilter({
-          ...filterSelected,
-          statusFilter: 'TO'
+          ...data,
+          [key]: resetValue
         });
       }
     });
+  };
 
+  if (filterSelected.statusFilter !== 'TO') {
+    addChip(filterSelected.statusFilter === 'PA' ? 'PagoS' : 'PendenteS', filterSelected, 'statusFilter', 'TO');
     currentFilters.filter = {
       ...currentFilters.filter,
       status: filterSelected.statusFilter
-    }
+    };
+  } else {
+    delete currentFilters.filter?.status;
   }
 
-  if (filterSelected.type === 'TO') {
-    delete currentFilters.filter?.tipo;
-  } else {
-    ChipsFilter.value.push({
-      label: `${filterSelected.type === 'R' ? 'Receita' : 'Despesa'}`,
-      data: filterSelected,
-      remove: () => {
-        ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.type !== filterSelected.type);
-        applyFilter({
-          ...filterSelected,
-          type: 'TO'
-        });
-      }
-    });
+  if (filterSelected.type !== 'TO') {
+    addChip(filterSelected.type === 'R' ? 'Receita' : 'Despesa', filterSelected, 'type', 'TO');
     currentFilters.filter = {
       ...currentFilters.filter,
       tipo: filterSelected.type
-    }
+    };
+  } else {
+    delete currentFilters.filter?.tipo;
   }
 
   if (filterSelected.period.value === 1) {
-    ChipsFilter.value.push({
-      label: `${filterSelected.period.label}`,
-      data: filterSelected,
-      remove: () => {
-        ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.period.value !== filterSelected.period.value);
-        applyFilter({
-          ...filterSelected,
-          period: {
-            label: 'Mês Atual',
-            value: 1
-          }
-        });
-      }
-    });
+    addChip(filterSelected.period.label, filterSelected, 'period', { label: 'Mês Atual', value: 1 });
     currentFilters.date_ranger = {
       start_date: moment().startOf('month').format('YYYY-MM-DD'),
       end_date: moment().endOf('month').format('YYYY-MM-DD')
-    }
+    };
   } else if (filterSelected.period.value === 2) {
-    ChipsFilter.value.push({
-      label: `${filterSelected.period.label}`,
-      data: filterSelected,
-      remove: () => {
-        ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.period.value !== filterSelected.period.value);
-        applyFilter({
-          ...filterSelected,
-          period: {
-            label: 'Mês Anterior',
-            value: 2
-          }
-        });
-      }
-    });
+    addChip(filterSelected.period.label, filterSelected, 'period', { label: 'Mês Anterior', value: 2 });
     currentFilters.date_ranger = {
       start_date: moment().add(1, 'month').startOf('month').format('YYYY-MM-DD'),
       end_date: moment().add(1, 'month').endOf('month').format('YYYY-MM-DD')
-    }
+    };
   } else if (filterSelected.period.value === 3) {
     if (filterSelected.radioTypeFilterPeriod === 'mounth') {
-      ChipsFilter.value.push({
-        label: `${filterSelected.month.label}`,
-        data: filterSelected,
-        remove: () => {
-          ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.period.value !== filterSelected.period.value);
-          applyFilter({
-            ...filterSelected,
-            period: {
-              label: 'Mês Atual',
-              value: 1
-            }
-          });
-        }
-      });
+      addChip(filterSelected.month.label, filterSelected, 'period', { label: 'Mês Atual', value: 1 });
       currentFilters.date_ranger = {
         start_date: moment().month(filterSelected.month.value - 1).startOf('month').format('YYYY-MM-DD'),
         end_date: moment().month(filterSelected.month.value - 1).endOf('month').format('YYYY-MM-DD')
-      }
+      };
     } else {
-      ChipsFilter.value.push({
-        label: `${moment(filterSelected.datePeriod[0]).format('DD/MM/YYYY')} - ${moment(filterSelected.datePeriod[1]).format('DD/MM/YYYY')}`,
-        data: filterSelected,
-        remove: () => {
-          ChipsFilter.value = ChipsFilter.value.filter((chip) => chip.data.period.value !== filterSelected.period.value);
-          applyFilter({
-            ...filterSelected,
-            period: {
-              label: 'Mês Atual',
-              value: 1
-            }
-          });
-        }
-      });
+      addChip(`${moment(filterSelected.datePeriod[0]).format('DD/MM/YYYY')} - ${moment(filterSelected.datePeriod[1]).format('DD/MM/YYYY')}`, filterSelected, 'period', { label: 'Mês Atual', value: 1 });
       currentFilters.date_ranger = {
         start_date: moment(filterSelected.datePeriod[0]).format('YYYY-MM-DD'),
         end_date: moment(filterSelected.datePeriod[1]).format('YYYY-MM-DD')
-      }
+      };
     }
   }
 
   filter.value = {
     ...currentFilters
-  }
+  };
 
   filterOptions.value = filterSelected;
 }
-
-onMounted(() => {
-  loadAllData();
-});
 
 watch(bills, () => {
   const data = bills.value as Bills[];
@@ -349,10 +286,12 @@ watch(filter, () => {
   loadBills();
 });
 
+loadAllData();
+
 </script>
 
 <template>
-  <Card class="card-main">
+  <Card>
     <template #title>
       <h3>Contas</h3>
 
