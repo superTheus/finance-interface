@@ -7,6 +7,10 @@ import { Api } from '@/services/api';
 import router from '@/router';
 import { useConfigStore } from '@/stores/config';
 
+import image1 from '@/assets/images/01.png';
+import image2 from '@/assets/images/02.svg';
+import image3 from '@/assets/images/03.svg';
+
 const config = useConfigStore();
 const email = ref('');
 const pass = ref('');
@@ -19,15 +23,15 @@ const isDarkMode = ref(config.config?.darkMode);
 
 const itemsCarousel = ref([
   {
-    image: '/src/assets/images/01.png',
+    image: image1,
     name: 'Tenha gráficos detalhados de suas finanças'
   },
   {
-    image: '/src/assets/images/02.svg',
+    image: image2,
     name: 'Faça a gestão de suas contas bancárias'
   },
   {
-    image: '/src/assets/images/03.svg',
+    image: image3,
     name: 'Controle suas despesas e receitas'
   }
 ])

@@ -21,10 +21,9 @@ const bankAccounts = ref<BankAccounts[]>([]);
 
 const filterType = ref<'d' | 'm'>('m');
 
-const mounthSelected = ref({
-  name: 'Todos os Meses',
-  code: 0
-});
+const mounthSelected = ref(0);
+
+const currentMounth = ref(mounths.find(m => m.value === moment().month() + 1)?.value || 0);
 
 const resumeBills = ref<ResumeBills>({
   total_falta_pagar: 0,
@@ -128,7 +127,7 @@ const setChartData = (bills: Bills[]) => {
 
   var labels: string[] = [];
 
-  filterType.value === 'm' ? labels.push(...mounths.map(m => m.label)) : labels.push(...utils.getDaysInMonth(mounthSelected.value.code, moment().year()).map(d => d.label));
+  filterType.value === 'm' ? labels.push(...mounths.map(m => m.label)) : labels.push(...utils.getDaysInMonth(mounthSelected.value, moment().year()).map(d => d.label));
 
   let values = filterType.value === 'm' ? mounths.map(mounth => {
     let billsPayments = payments.filter(bill => moment(bill.vencimento).month() === mounth.value - 1);
@@ -138,7 +137,7 @@ const setChartData = (bills: Bills[]) => {
       payments: billsPayments.reduce((acc, bill) => acc + Number(bill.valor), 0) * -1,
       receipts: billsReceipts.reduce((acc, bill) => acc + Number(bill.valor), 0)
     }
-  }) : utils.getDaysInMonth(mounthSelected.value.code, moment().year()).map(day => {
+  }) : utils.getDaysInMonth(mounthSelected.value, moment().year()).map(day => {
     let billsPayments = payments.filter(bill => moment(bill.vencimento).date() === day.value);
     let billsReceipts = receipts.filter(bill => moment(bill.vencimento).date() === day.value);
 
@@ -237,7 +236,7 @@ watch(filterResumeReiod, (newVal) => {
 });
 
 watch(mounthSelected, (newVal) => {
-  if (newVal.code === 0) {
+  if (newVal === 0) {
     filterType.value = 'm';
     filter.value.date_ranger = {
       start_date: moment().startOf('year').format('YYYY-MM-DD'),
@@ -246,12 +245,28 @@ watch(mounthSelected, (newVal) => {
   } else {
     filterType.value = 'd';
     filter.value.date_ranger = {
-      start_date: moment().startOf('month').add(newVal.code - 1, 'month').format('YYYY-MM-DD'),
-      end_date: moment().endOf('month').add(newVal.code - 1, 'month').format('YYYY-MM-DD')
+      start_date: moment().month(newVal - 1).startOf('month').format('YYYY-MM-DD'),
+      end_date: moment().month(newVal - 1).endOf('month').format('YYYY-MM-DD')
     };
   }
 
   loadBills();
+});
+
+watch(currentMounth, (newVal) => {
+  if (newVal === 0) {
+    filterResume.value.date_ranger = {
+      start_date: moment().startOf('year').format('YYYY-MM-DD'),
+      end_date: moment().endOf('year').format('YYYY-MM-DD')
+    };
+  } else {
+    filterResume.value.date_ranger = {
+      start_date: moment().month(newVal - 1).startOf('month').format('YYYY-MM-DD'),
+      end_date: moment().month(newVal - 1).endOf('month').format('YYYY-MM-DD')
+    };
+  }
+
+  loadResumes();
 });
 
 loadBills();
@@ -268,7 +283,7 @@ loadBankAccounts();
     <template #content>
       <div class="flex justify-content-between align-items-center">
         <h3> Resumos </h3>
-        <SelectButton v-model="filterResumeReiod" :options="filtersOptions.options" optionLabel="label" class="mt-2" />
+        <Select v-model="currentMounth" :options="monthsSelected.slice(1)" optionLabel="name" option-value="code" placeholder="Selecione um mês" />
       </div>
 
       <div class="card-resume-container my-3">
@@ -276,16 +291,17 @@ loadBankAccounts();
           class="card-resume card-resume_danger" />
         <ValuesTotals :value="resumeBills.total_receitas" label="Total de receitas" icon="pi pi-file"
           class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.saldo" label="Previsão de Saldo no mês" icon="pi pi-file"
-          class="card-resume" :class="resumeBills.saldo <= 0 ? 'card-resume_danger' : 'card-resume_green'" />
-        <ValuesTotals :value="bankAccountsSelected?.saldo" :label="'Saldo - ' + bankAccountsSelected?.descricao" icon="pi pi-file"
-          class="card-resume" :class="(bankAccountsSelected?.saldo || 0) > 0 ? 'card-resume_green' : 'card-resume_danger'" />
+        <ValuesTotals :value="resumeBills.saldo" label="Previsão de Saldo no mês" icon="pi pi-file" class="card-resume"
+          :class="resumeBills.saldo <= 0 ? 'card-resume_danger' : 'card-resume_green'" />
+        <ValuesTotals :value="bankAccountsSelected?.saldo" :label="'Saldo - ' + bankAccountsSelected?.descricao"
+          icon="pi pi-file" class="card-resume"
+          :class="(bankAccountsSelected?.saldo || 0) > 0 ? 'card-resume_green' : 'card-resume_danger'" />
       </div>
 
       <div class="chart-container mt-4">
         <div class="flex justify-content-between align-items-center">
-          <h3> Contas - Meses </h3>
-          <Select v-model="mounthSelected" :options="monthsSelected" optionLabel="name"
+          <h3> Contas - Mês </h3>
+          <Select v-model="mounthSelected" :options="monthsSelected" optionLabel="name" option-value="code"
             placeholder="Selecione um mês" />
         </div>
         <div v-if="!loading" class="card-chart">

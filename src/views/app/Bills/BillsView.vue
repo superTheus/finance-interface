@@ -9,6 +9,7 @@ import ModalFilters from '@/components/ModalFilters.vue';
 import ValuesTotals from '@/components/ValuesTotals.vue';
 import type { MenuItem } from 'primevue/menuitem';
 import { mounths } from '@/constants/constants';
+import { useToast } from 'primevue';
 
 const user = useUserStore();
 const api = new Api();
@@ -20,8 +21,8 @@ const showFilter = ref(false);
 const showDialogPayment = ref(false);
 const forms = ref<PaymentsForms[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
-const dataPagamento = ref<Date>(moment().toDate());
 const accountSelected = ref<Bills>();
+const toast = useToast();
 
 const filter = ref<BillsRequest>({
   filter: {
@@ -72,9 +73,13 @@ const items = ref<{
 const formPayment = ref<{
   formaPagamento: PaymentsForms;
   bankAccount: BankAccounts;
+  valorPago: number;
+  dataPagamento: Date;
 }>({
   formaPagamento: {} as PaymentsForms,
-  bankAccount: {} as BankAccounts
+  bankAccount: {} as BankAccounts,
+  dataPagamento: moment().toDate(),
+  valorPago: 0
 });
 
 const ChipsFilter = ref<{
@@ -147,11 +152,22 @@ function loadAllData() {
 }
 
 const updateBill = () => {
+  if (formPayment.value.valorPago > (accountSelected.value?.valor || 0)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: 'Valor pago não pode ser maior que o valor da conta',
+      life: 3000
+    });
+    return;
+  }
+
   api.updateBills(accountSelected.value?.id || 0, {
     status: 'PA',
     id_forma_pagamento: formPayment.value.formaPagamento.id,
     id_conta_bancaria: formPayment.value.bankAccount.id,
-    data_pagamento: moment(dataPagamento.value).format('YYYY-MM-DD')
+    data_pagamento: moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
+    valor_pago: formPayment.value.valorPago
   }).then(() => {
     showDialogPayment.value = false;
     loadAllData();
@@ -246,6 +262,7 @@ watch(bills, () => {
         icon: 'pi pi-arrow-circle-down',
         key: bill.id?.toString(),
         command: () => {
+          formPayment.value.valorPago = bill.valor;
           accountSelected.value = bill;
           showDialogPayment.value = true;
         }
@@ -377,6 +394,12 @@ loadAllData();
         === 'D' ? 'Pagar' : 'Receber' }} </span>
     </div>
 
+    <div class="mt-3">
+      <p> Valor Pago: </p>
+      <InputNumber v-model="formPayment.valorPago" date-format="dd/mm/yy" class="w-full mt-2" :minFractionDigits="2"
+        :maxFractionDigits="2" fluid />
+    </div>
+
     <div class="mt-4">
       <p> Selecione Forma de Pagamento: </p>
       <Select v-model="formPayment.formaPagamento" :options="forms" optionLabel="descricao"
@@ -391,7 +414,7 @@ loadAllData();
 
     <div class="mt-3">
       <p> Data do Pagamento: </p>
-      <DatePicker v-model="dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
+      <DatePicker v-model="formPayment.dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
     </div>
 
     <template #footer>
