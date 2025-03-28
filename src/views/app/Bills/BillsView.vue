@@ -340,6 +340,10 @@ loadAllData();
           class="card-resume card-resume_green" />
       </div>
 
+      <div v-if="total" class="resume mt-3">
+        <h3> {{ total }} Contas encontradas </h3>
+      </div>
+
       <DataTable :value="bills" class="mt-3" stripedRows tableStyle="min-width: 50rem">
         <Column field="titulo" header="Titulo">
           <template #body="slotProps">

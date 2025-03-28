@@ -4,7 +4,6 @@ import Button from 'primevue/button';
 import { useUserStore } from '@/stores/user';
 import { useConfigStore } from '@/stores/config';
 import { useDialog } from 'primevue/usedialog';
-import DynamicDialog from 'primevue/dynamicdialog';
 
 import Config from './Config.vue';
 
