@@ -160,6 +160,26 @@
   box-shadow: 0 4px 6px hex-to-rgba(var(--p-card-shadow)) !important;
 }
 
+.justify-end {
+  justify-content: flex-end !important;
+}
+
+.justify-between {
+  justify-content: space-between !important;
+}
+
+.flex-col {
+  flex-direction: column !important;
+}
+
+.gap-2 {
+  gap: 0.5rem !important;
+}
+
+.w-50 {
+  width: 50% !important;
+}
+
 @media screen and (max-width: 768px) {
   .card-resume {
     width: 45%;

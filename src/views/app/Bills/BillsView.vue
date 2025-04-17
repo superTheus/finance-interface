@@ -19,7 +19,44 @@ const page = ref(1);
 const total = ref(0);
 const showFilter = ref(false);
 const showDialogPayment = ref(false);
+const showDialogEdit = ref(true);
 const forms = ref<PaymentsForms[]>([]);
+
+const formAccount = ref<{
+  titulo: string;
+  valor: number;
+  vencimento?: Date;
+  descricao?: string;
+  num_parcelas?: number;
+  frequencia?: number;
+  forma_frequencia: 'N' | 'P' | 'F';
+  optionFrequencia: {
+    name: string;
+    value: string;
+  }[];
+  pagoOptions: {
+    name: string;
+    value: string;
+  }[];
+  status: 'PA' | 'PN';
+  data_pagamento?: Date;
+  valor_pago?: number;
+}>({
+  titulo: '',
+  valor: 0,
+  forma_frequencia: 'N',
+  optionFrequencia: [
+    { name: 'Conta única', value: 'N' },
+    { name: 'Parcelada', value: 'P' },
+    { name: 'Frequente', value: 'F' }
+  ],
+  status: 'PN',
+  pagoOptions: [
+    { name: 'Pago', value: 'PA' },
+    { name: 'Pendente', value: 'PN' }
+  ]
+});
+
 const bankAccounts = ref<BankAccounts[]>([]);
 const accountSelected = ref<Bills>();
 const toast = useToast();
@@ -35,7 +72,7 @@ const filter = ref<BillsRequest>({
     end_date: moment().endOf('month').format('YYYY-MM-DD')
   },
   order: {
-    cols: ["vencimento"],
+    cols: ["vencimento", "id"],
     direction: "ASC"
   }
 });
@@ -100,6 +137,19 @@ const ChipsFilter = ref<{
     });
   }
 }]);
+
+function update() {
+  api.updateBills(accountSelected.value?.id || 0, {
+    status: 'PA',
+    id_forma_pagamento: formPayment.value.formaPagamento.id,
+    id_conta_bancaria: formPayment.value.bankAccount.id,
+    data_pagamento: moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
+    valor_pago: formPayment.value.valorPago
+  }).then(() => {
+    showDialogPayment.value = false;
+    loadAllData();
+  });
+}
 
 function loadBills() {
   api.findBills(filter.value).then((data) => {
@@ -274,7 +324,8 @@ watch(bills, () => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-
+          accountSelected.value = bill;
+          showDialogEdit.value = true;
         }
       },
       {
@@ -384,9 +435,11 @@ loadAllData();
     </template>
   </Card>
 
-  <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter" />
+  <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter">
+  </ModalFilters>
 
   <Dialog v-model:visible="showDialogPayment" modal header="Pagar Conta" :style="{ width: 'auto', minWidth: '30rem' }">
+
     <template #header>
       <h2> Pagar Conta </h2>
     </template>
@@ -427,6 +480,138 @@ loadAllData();
         <Button label="Pagar" class="p-button-primary" @click="updateBill" />
       </div>
     </template>
+  </Dialog>
+
+  <Dialog v-model:visible="showDialogEdit" modal header="Adicionar conta" :style="{ width: 'auto', minWidth: '60rem' }">
+    <form @submit="update">
+      <Stepper value="1" class="w-full" linear>
+        <StepList>
+          <Step value="1">Dados Inicias</Step>
+          <Step value="2">Parcelas</Step>
+          <Step value="3">Pagamento</Step>
+        </StepList>
+        <StepPanels>
+          <StepPanel v-slot="{ activateCallback }" value="1">
+            <div class="flex flex-col h-48 w-50 m-auto gap-2">
+
+              <FloatLabel class="mt-4 w-full">
+                <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
+                <label for="titulo">Titulo</label>
+              </FloatLabel>
+
+              <FloatLabel class="mt-4 w-full">
+                <InputNumber id="valor" v-model="formAccount.valor" class="w-full" :minFractionDigits="2"
+                  :maxFractionDigits="2" fluid />
+                <label for="valor">Valor</label>
+              </FloatLabel>
+
+              <FloatLabel class="mt-4 w-full">
+                <DatePicker id="vencimento" v-model="formAccount.vencimento" date-format="dd/mm/yy" class="w-full" />
+                <label for="vencimento">Data Vencimento</label>
+              </FloatLabel>
+
+              <FloatLabel class="mt-4 w-full">
+                <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
+                <label for="descricao">Descrição (Opcional)</label>
+              </FloatLabel>
+
+            </div>
+            <div class="flex pt-6 justify-end w-full">
+              <Button label="Continuar" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
+            </div>
+          </StepPanel>
+
+          <StepPanel v-slot="{ activateCallback }" value="2">
+            <div class="flex flex-col h-48 w-50 m-auto gap-2">
+
+              <SelectButton v-model="formAccount.forma_frequencia" :options="formAccount.optionFrequencia"
+                optionLabel="name" optionValue="value" />
+
+              <div v-if="formAccount.forma_frequencia === 'P'">
+                <FloatLabel class="mt-4 w-full">
+                  <InputNumber id="num_parcelas" v-model="formAccount.num_parcelas" class="w-full" />
+                  <label for="num_parcelas">Número de Parcelas</label>
+                </FloatLabel>
+              </div>
+
+              <div v-if="formAccount.forma_frequencia === 'F'">
+                <FloatLabel class="mt-4 w-full">
+                  <InputNumber id="frequencia" v-model="formAccount.frequencia" class="w-full" />
+                  <label for="frequencia">Quantidade de meses para frequência</label>
+                </FloatLabel>
+              </div>
+
+            </div>
+            <div class="flex pt-6 justify-between">
+              <Button label="Voltar" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
+              <Button label="Continuar" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+            </div>
+          </StepPanel>
+
+          <StepPanel v-slot="{ activateCallback }" value="3">
+            <div class="flex flex-col h-48 w-50 m-auto gap-2">
+
+              <FloatLabel class="mt-4 w-full">
+                <Select v-model="formAccount.status" :options="formAccount.pagoOptions" optionLabel="name"
+                  optionValue="value" placeholder="Selecione status de pagamento" class="w-full" />
+                <label for="vencimento">Pagamento</label>
+              </FloatLabel>
+
+              <div v-if="formAccount.status == 'PA'">
+
+                <div class="value-pay">
+                  <h2 :class="accountSelected?.tipo === 'D' ? 'text-danger' : 'text-success'"> {{
+                    utils.formatCurrency(accountSelected?.valor || 0) }} </h2>
+                  <span :class="accountSelected?.tipo === 'D' ? 'text-danger' : 'text-success'"> Valor à {{
+                    accountSelected?.tipo
+                      === 'D' ? 'Pagar' : 'Receber' }} </span>
+                </div>
+
+                <div class="mt-3">
+                  <p> Valor Pago: </p>
+                  <InputNumber v-model="formPayment.valorPago" date-format="dd/mm/yy" class="w-full mt-2"
+                    :minFractionDigits="2" :maxFractionDigits="2" fluid />
+                </div>
+
+                <div class="mt-4">
+                  <p> Selecione Forma de Pagamento: </p>
+                  <Select v-model="formPayment.formaPagamento" :options="forms" optionLabel="descricao"
+                    placeholder="Selecione a forma" class="w-full mt-2" />
+                </div>
+
+                <div class="mt-3">
+                  <p> Selecione Conta Bancária: </p>
+                  <Select v-model="formPayment.bankAccount" :options="bankAccounts" optionLabel="descricao"
+                    placeholder="Selecione a conta bancária" class="w-full mt-2" />
+                </div>
+
+                <div class="mt-3">
+                  <p> Data do Pagamento: </p>
+                  <DatePicker v-model="formPayment.dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
+                </div>
+
+
+                <FloatLabel class="mt-4 w-full">
+                  <DatePicker id="data_pagamento" v-model="formAccount.data_pagamento" date-format="dd/mm/yy"
+                    class="w-full" />
+                  <label for="data_pagamento">Data Pagamento</label>
+                </FloatLabel>
+                <FloatLabel class="mt-4 w-full">
+                  <InputNumber id="valor_pago" v-model="formAccount.valor_pago" class="w-full" :minFractionDigits="2"
+                    :maxFractionDigits="2" fluid />
+                  <label for="valor_pago">Valor Pago</label>
+                </FloatLabel>
+              </div>
+
+            </div>
+            <div class="flex pt-6 justify-between">
+              <Button label="Voltar" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
+              <Button label="Finalizar" icon="pi pi-arrow-right" iconPos="right" />
+            </div>
+          </StepPanel>
+        </StepPanels>
+      </Stepper>
+    </form>
   </Dialog>
 </template>
 

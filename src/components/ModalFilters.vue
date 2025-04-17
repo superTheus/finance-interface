@@ -50,7 +50,8 @@ const applyFilters = () => {
             <label for="forMounth">Por Mês</label>
           </div>
           <div class="flex items-center gap-2">
-            <RadioButton v-model="props.filterSelected.radioTypeFilterPeriod" input-id="forDate" name="date" value="date" />
+            <RadioButton v-model="props.filterSelected.radioTypeFilterPeriod" input-id="forDate" name="date"
+              value="date" />
             <label for="forDate">Por Data</label>
           </div>
         </div>
@@ -65,8 +66,8 @@ const applyFilters = () => {
         <div v-if="props.filterSelected.radioTypeFilterPeriod === 'date'" class="mt-2">
           <h4> Data </h4>
           <div class="flex gap-2">
-            <DatePicker v-model="props.filterSelected.datePeriod" selectionMode="range" :manualInput="false" class="w-full"
-              date-format="dd/mm/yyyy" />
+            <DatePicker v-model="props.filterSelected.datePeriod" selectionMode="range" :manualInput="false"
+              class="w-full" date-format="dd/mm/yyyy" />
           </div>
         </div>
       </div>

@@ -48,6 +48,18 @@ export interface Bills {
   dthr_registro: string
 }
 
+export type BillsForm = {
+  titulo: string,
+  descricao: string,
+  valor: number,
+  vencimento: string,
+  usa_parcelas: boolean,
+  parcelas?: number,
+  num_parcela?: number,
+  usa_frequencia?: boolean,
+  frequencia?: number,
+};
+
 export type PartialBills = Partial<Bills>;
 
 export interface BillsRequest extends request {
