@@ -1,3 +1,5 @@
+@use './responsive' as responsive;
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
@@ -53,6 +55,14 @@
   font-weight: normal;
 }
 
+html {
+  font-size: 16px;
+
+  @include responsive.breakpoint(sm) {
+    font-size: 12px;
+  }
+}
+
 body {
   min-height: 100vh;
   color: var(--color-text);
@@ -75,7 +85,6 @@ body {
     'Droid Sans',
     'Helvetica Neue',
     sans-serif;
-  font-size: 15px;
   font-optical-sizing: auto;
   font-style: normal;
   text-rendering: optimizeLegibility;

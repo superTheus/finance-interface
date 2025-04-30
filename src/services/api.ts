@@ -44,6 +44,17 @@ export class Api {
     })
   }
 
+  createBills(bill: PartialBills): Promise<Bills> {
+    return new Promise<Bills>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post(`/contas/create`, bill);
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response.data);
+      }
+    })
+  }
+
   updateBills(id: number, bill: PartialBills): Promise<Bills> {
     return new Promise<Bills>(async (resolve, reject) => {
       try {

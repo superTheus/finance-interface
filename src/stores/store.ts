@@ -12,6 +12,10 @@ export function getConfig(): Config {
   return { darkMode: false };
 }
 
+export function clearSession() {
+  sessionStorage.clear();
+}
+
 export function saveUser(user: User) {
   sessionStorage.setItem("user", JSON.stringify(user));
 }

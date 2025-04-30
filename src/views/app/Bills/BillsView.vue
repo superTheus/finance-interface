@@ -9,9 +9,11 @@ import ModalFilters from '@/components/ModalFilters.vue';
 import ValuesTotals from '@/components/ValuesTotals.vue';
 import type { MenuItem } from 'primevue/menuitem';
 import { mounths } from '@/constants/constants';
-import { useToast } from 'primevue';
+import { useConfirm, useToast } from 'primevue';
 
 const user = useUserStore();
+const confirm = useConfirm();
+const toast = useToast();
 const api = new Api();
 const utils = new Utils();
 const bills = ref<Bills[]>([]);
@@ -19,21 +21,18 @@ const page = ref(1);
 const total = ref(0);
 const showFilter = ref(false);
 const showDialogPayment = ref(false);
-const showDialogEdit = ref(true);
+const showDialogForm = ref(false);
+const isEditMode = ref(false);
 const forms = ref<PaymentsForms[]>([]);
+const bankAccounts = ref<BankAccounts[]>([]);
+const accountSelected = ref<Bills>();
 
 const formAccount = ref<{
+  tipo: "D" | "R",
   titulo: string;
   valor: number;
   vencimento?: Date;
   descricao?: string;
-  num_parcelas?: number;
-  frequencia?: number;
-  forma_frequencia: 'N' | 'P' | 'F';
-  optionFrequencia: {
-    name: string;
-    value: string;
-  }[];
   pagoOptions: {
     name: string;
     value: string;
@@ -41,29 +40,34 @@ const formAccount = ref<{
   status: 'PA' | 'PN';
   data_pagamento?: Date;
   valor_pago?: number;
+  contaParcelada?: "S" | "N";
+  contaFrequente?: "S" | "N";
+  total_parcelas?: number;
+  frequencia?: number;
+  formaPagamento?: PaymentsForms;
+  bankAccount?: BankAccounts;
+  valorPago: number;
+  dataPagamento?: Date;
 }>({
+  tipo: "D",
   titulo: '',
   valor: 0,
-  forma_frequencia: 'N',
-  optionFrequencia: [
-    { name: 'Conta única', value: 'N' },
-    { name: 'Parcelada', value: 'P' },
-    { name: 'Frequente', value: 'F' }
-  ],
   status: 'PN',
   pagoOptions: [
     { name: 'Pago', value: 'PA' },
     { name: 'Pendente', value: 'PN' }
-  ]
+  ],
+  contaParcelada: "N",
+  contaFrequente: "N",
+  frequencia: 2,
+  total_parcelas: 2,
+  valorPago: 0,
 });
-
-const bankAccounts = ref<BankAccounts[]>([]);
-const accountSelected = ref<Bills>();
-const toast = useToast();
 
 const filter = ref<BillsRequest>({
   filter: {
-    id_usuario: user.user?.id || 0
+    id_usuario: user.user?.id || 0,
+    deletado: 'N'
   },
   limit: 5,
   offset: 0,
@@ -138,19 +142,6 @@ const ChipsFilter = ref<{
   }
 }]);
 
-function update() {
-  api.updateBills(accountSelected.value?.id || 0, {
-    status: 'PA',
-    id_forma_pagamento: formPayment.value.formaPagamento.id,
-    id_conta_bancaria: formPayment.value.bankAccount.id,
-    data_pagamento: moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
-    valor_pago: formPayment.value.valorPago
-  }).then(() => {
-    showDialogPayment.value = false;
-    loadAllData();
-  });
-}
-
 function loadBills() {
   api.findBills(filter.value).then((data) => {
     total.value = data.total;
@@ -201,6 +192,49 @@ function loadAllData() {
   });
 }
 
+const createBill = () => {
+  const bill: Bills = {
+    id_usuario: user.user?.id || 0,
+    titulo: formAccount.value.titulo,
+    tipo: formAccount.value.tipo,
+    valor: formAccount.value.valor,
+    vencimento: moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
+    descricao: formAccount.value.descricao || '',
+    status: formAccount.value.status,
+    data_pagamento: moment(formAccount.value.data_pagamento).format('YYYY-MM-DD'),
+  }
+
+  if (formAccount.value.contaParcelada === 'S') {
+    bill.total_parcelas = formAccount.value.total_parcelas;
+    bill.status = 'PN';
+  }
+
+  if (formAccount.value.contaFrequente === 'S') {
+    bill.frequencia = formAccount.value.frequencia;
+    bill.status = 'PN';
+  }
+
+  if (formAccount.value.status === "PA") {
+    bill.id_forma_pagamento = formPayment.value.formaPagamento.id;
+    bill.id_conta_bancaria = formPayment.value.bankAccount.id;
+    bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
+    bill.valor_pago = formPayment.value.valorPago;
+  }
+
+  api.createBills(bill).then(() => {
+    showDialogForm.value = false;
+    loadBills();
+    loadResumes();
+  }).catch((error) => {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: error.response.data.message,
+      life: 3000
+    });
+  });
+}
+
 const updateBill = () => {
   if (formPayment.value.valorPago > (accountSelected.value?.valor || 0)) {
     toast.add({
@@ -212,15 +246,44 @@ const updateBill = () => {
     return;
   }
 
-  api.updateBills(accountSelected.value?.id || 0, {
-    status: 'PA',
-    id_forma_pagamento: formPayment.value.formaPagamento.id,
-    id_conta_bancaria: formPayment.value.bankAccount.id,
-    data_pagamento: moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
-    valor_pago: formPayment.value.valorPago
-  }).then(() => {
+  const bill = { ...accountSelected.value }
+
+  if (isEditMode) {
+    bill.titulo = formAccount.value.titulo,
+      bill.tipo = formAccount.value.tipo,
+      bill.valor = formAccount.value.valor,
+      bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
+      bill.descricao = formAccount.value.descricao || ''
+  } else {
+    bill.status = 'PA',
+      bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
+      bill.id_conta_bancaria = formPayment.value.bankAccount.id,
+      bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
+      bill.valor_pago = formPayment.value.valorPago
+  }
+
+  api.updateBills(accountSelected.value?.id || 0, bill).then(() => {
     showDialogPayment.value = false;
-    loadAllData();
+    showDialogForm.value = false;
+    loadBills();
+    loadResumes();
+  });
+}
+
+const deleteBill = ({ success, error }: { success?: Function, error?: Function }) => {
+  api.updateBills(accountSelected.value?.id || 0, {
+    deletado: 'S'
+  }).then(() => {
+    loadBills();
+    loadResumes();
+
+    if (success) {
+      success();
+    }
+  }).catch(() => {
+    if (error) {
+      error();
+    }
   });
 }
 
@@ -301,6 +364,44 @@ const applyFilter = (filterSelected: FilterBill) => {
   filterOptions.value = filterSelected;
 }
 
+const confirmDelete = (bill: Bills) => {
+  confirm.require({
+    message: 'Realmente deseja deletar a conta ?',
+    header: 'Atenção',
+    icon: 'pi pi-info-circle',
+    rejectLabel: 'Cancel',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Deletar',
+      severity: 'danger'
+    },
+    accept: () => {
+      deleteBill({
+        success: () => {
+          toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Conta deletada com sucesso',
+            life: 3000
+          });
+        },
+        error: () => {
+          toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Erro ao deletar conta',
+            life: 3000
+          });
+        }
+      });
+    }
+  });
+};
+
 watch(bills, () => {
   const data = bills.value as Bills[];
   items.value = data.map((bill) => {
@@ -324,15 +425,23 @@ watch(bills, () => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
+          isEditMode.value = true;
           accountSelected.value = bill;
-          showDialogEdit.value = true;
+          showDialogForm.value = true;
+
+          formAccount.value.tipo = bill.tipo;
+          formAccount.value.titulo = bill.titulo;
+          formAccount.value.valor = bill.valor;
+          formAccount.value.vencimento = moment(bill.vencimento).toDate();
+          formAccount.value.descricao = bill.descricao || '';
         }
       },
       {
         label: 'Excluir',
         icon: 'pi pi-trash',
         command: () => {
-
+          accountSelected.value = bill;
+          confirmDelete(bill);
         }
       }
     );
@@ -361,11 +470,11 @@ loadAllData();
 <template>
   <Card>
     <template #title>
-      <h3>Contas</h3>
+      <p>Contas</p>
 
       <div class="flex justify-content-between mt-2">
         <Button label="Filtrar" icon="pi pi-filter" class="p-button-secondary" @click="showFilter = true" />
-        <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" />
+        <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
       </div>
     </template>
 
@@ -482,17 +591,26 @@ loadAllData();
     </template>
   </Dialog>
 
-  <Dialog v-model:visible="showDialogEdit" modal header="Adicionar conta" :style="{ width: 'auto', minWidth: '60rem' }">
-    <form @submit="update">
-      <Stepper value="1" class="w-full" linear>
+  <Dialog v-model:visible="showDialogForm" modal :header="isEditMode ? 'Editar conta' : 'Adicionar conta'"
+    :style="{ width: 'auto', minWidth: '60rem' }">
+    <form @submit.prevent="isEditMode ? updateBill() : createBill()">
+      <Stepper v-if="!isEditMode" value="1" class="w-full" linear>
         <StepList>
           <Step value="1">Dados Inicias</Step>
           <Step value="2">Parcelas</Step>
-          <Step value="3">Pagamento</Step>
+          <Step v-if="formAccount.contaParcelada === 'N' && formAccount.contaFrequente === 'N'" value="3">Pagamento
+          </Step>
         </StepList>
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
             <div class="flex flex-col h-48 w-50 m-auto gap-2">
+              <FloatLabel class="mt-4 w-full">
+                <Select v-model="formAccount.tipo" :options="[
+                  { name: 'Despesa', value: 'D' },
+                  { name: 'Receita', value: 'R' },
+                ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
+                <label for="titulo">Tipo de Conta</label>
+              </FloatLabel>
 
               <FloatLabel class="mt-4 w-full">
                 <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
@@ -522,29 +640,47 @@ loadAllData();
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="2">
-            <div class="flex flex-col h-48 w-50 m-auto gap-2">
-
-              <SelectButton v-model="formAccount.forma_frequencia" :options="formAccount.optionFrequencia"
-                optionLabel="name" optionValue="value" />
-
-              <div v-if="formAccount.forma_frequencia === 'P'">
-                <FloatLabel class="mt-4 w-full">
-                  <InputNumber id="num_parcelas" v-model="formAccount.num_parcelas" class="w-full" />
-                  <label for="num_parcelas">Número de Parcelas</label>
-                </FloatLabel>
-              </div>
-
-              <div v-if="formAccount.forma_frequencia === 'F'">
-                <FloatLabel class="mt-4 w-full">
-                  <InputNumber id="frequencia" v-model="formAccount.frequencia" class="w-full" />
-                  <label for="frequencia">Quantidade de meses para frequência</label>
-                </FloatLabel>
-              </div>
-
+            <div v-if="formAccount.contaFrequente === 'N'" class="flex flex-col h-48 w-50 m-auto gap-2">
+              <FloatLabel class="mt-4 w-full">
+                <Select v-model="formAccount.contaParcelada" :options="[
+                  { name: 'Sim', value: 'S' },
+                  { name: 'Não', value: 'N' },
+                ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
+                <label for="titulo">Conta Parcelada ?</label>
+              </FloatLabel>
             </div>
+
+            <div v-if="formAccount.contaParcelada === 'S'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+              <FloatLabel class="mt-4 w-full">
+                <InputNumber v-model="formAccount.total_parcelas" :min="2" fluid />
+                <label for="titulo">Total de Parcelas</label>
+              </FloatLabel>
+            </div>
+
+            <div v-if="formAccount.contaParcelada === 'N'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+              <FloatLabel class="mt-4 w-full">
+                <Select v-model="formAccount.contaFrequente" :options="[
+                  { name: 'Sim', value: 'S' },
+                  { name: 'Não', value: 'N' },
+                ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
+                <label for="titulo">Conta Frequente ?</label>
+              </FloatLabel>
+            </div>
+
+            <div v-if="formAccount.contaFrequente === 'S'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+              <FloatLabel class="mt-4 w-full">
+                <InputNumber v-model="formAccount.frequencia" :min="2" fluid />
+                <label for="titulo">Quantidade de meses</label>
+              </FloatLabel>
+            </div>
+
             <div class="flex pt-6 justify-between">
               <Button label="Voltar" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
-              <Button label="Continuar" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+              <Button v-if="formAccount.contaFrequente === 'N' && formAccount.contaParcelada === 'N'" label="Continuar"
+                icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+
+              <Button v-if="formAccount.contaFrequente === 'S' || formAccount.contaParcelada === 'S'" type="submit"
+                label="Finalizar" icon="pi pi-check" iconPos="left" />
             </div>
           </StepPanel>
 
@@ -560,57 +696,82 @@ loadAllData();
               <div v-if="formAccount.status == 'PA'">
 
                 <div class="value-pay">
-                  <h2 :class="accountSelected?.tipo === 'D' ? 'text-danger' : 'text-success'"> {{
-                    utils.formatCurrency(accountSelected?.valor || 0) }} </h2>
-                  <span :class="accountSelected?.tipo === 'D' ? 'text-danger' : 'text-success'"> Valor à {{
-                    accountSelected?.tipo
+                  <h2 :class="formAccount.tipo === 'D' ? 'text-danger' : 'text-success'"> {{
+                    utils.formatCurrency(formAccount.valor || 0) }} </h2>
+                  <span :class="formAccount.tipo === 'D' ? 'text-danger' : 'text-success'"> Valor à {{
+                    formAccount.tipo
                       === 'D' ? 'Pagar' : 'Receber' }} </span>
                 </div>
 
                 <div class="mt-3">
                   <p> Valor Pago: </p>
-                  <InputNumber v-model="formPayment.valorPago" date-format="dd/mm/yy" class="w-full mt-2"
+                  <InputNumber v-model="formAccount.valorPago" date-format="dd/mm/yy" class="w-full mt-2"
                     :minFractionDigits="2" :maxFractionDigits="2" fluid />
                 </div>
 
                 <div class="mt-4">
                   <p> Selecione Forma de Pagamento: </p>
-                  <Select v-model="formPayment.formaPagamento" :options="forms" optionLabel="descricao"
+                  <Select v-model="formAccount.formaPagamento" :options="forms" optionLabel="descricao"
                     placeholder="Selecione a forma" class="w-full mt-2" />
                 </div>
 
                 <div class="mt-3">
                   <p> Selecione Conta Bancária: </p>
-                  <Select v-model="formPayment.bankAccount" :options="bankAccounts" optionLabel="descricao"
+                  <Select v-model="formAccount.bankAccount" :options="bankAccounts" optionLabel="descricao"
                     placeholder="Selecione a conta bancária" class="w-full mt-2" />
                 </div>
 
                 <div class="mt-3">
                   <p> Data do Pagamento: </p>
-                  <DatePicker v-model="formPayment.dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
+                  <DatePicker v-model="formAccount.dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
                 </div>
-
-
-                <FloatLabel class="mt-4 w-full">
-                  <DatePicker id="data_pagamento" v-model="formAccount.data_pagamento" date-format="dd/mm/yy"
-                    class="w-full" />
-                  <label for="data_pagamento">Data Pagamento</label>
-                </FloatLabel>
-                <FloatLabel class="mt-4 w-full">
-                  <InputNumber id="valor_pago" v-model="formAccount.valor_pago" class="w-full" :minFractionDigits="2"
-                    :maxFractionDigits="2" fluid />
-                  <label for="valor_pago">Valor Pago</label>
-                </FloatLabel>
               </div>
 
             </div>
             <div class="flex pt-6 justify-between">
               <Button label="Voltar" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
-              <Button label="Finalizar" icon="pi pi-arrow-right" iconPos="right" />
+              <Button type="submit" label="Finalizar" icon="pi pi-check" iconPos="left" />
             </div>
           </StepPanel>
         </StepPanels>
       </Stepper>
+
+      <div v-if="isEditMode">
+        <div class="flex flex-col h-48 w-50 m-auto gap-2">
+          <FloatLabel class="mt-4 w-full">
+            <Select v-model="formAccount.tipo" :options="[
+              { name: 'Despesa', value: 'D' },
+              { name: 'Receita', value: 'R' },
+            ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
+            <label for="titulo">Tipo de Conta</label>
+          </FloatLabel>
+
+          <FloatLabel class="mt-4 w-full">
+            <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
+            <label for="titulo">Titulo</label>
+          </FloatLabel>
+
+          <FloatLabel class="mt-4 w-full">
+            <InputNumber id="valor" v-model="formAccount.valor" class="w-full" :minFractionDigits="2"
+              :maxFractionDigits="2" fluid />
+            <label for="valor">Valor</label>
+          </FloatLabel>
+
+          <FloatLabel class="mt-4 w-full">
+            <DatePicker id="vencimento" v-model="formAccount.vencimento" date-format="dd/mm/yy" class="w-full" />
+            <label for="vencimento">Data Vencimento</label>
+          </FloatLabel>
+
+          <FloatLabel class="mt-4 w-full">
+            <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
+            <label for="descricao">Descrição (Opcional)</label>
+          </FloatLabel>
+
+        </div>
+        <div class="flex pt-6 justify-end w-full">
+          <Button label="Salvar" type="submit" icon="pi pi-check" iconPos="left" />
+        </div>
+      </div>
     </form>
   </Dialog>
 </template>
@@ -620,6 +781,21 @@ loadAllData();
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+  overflow-x: auto;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
 }
 
 .value-pay {

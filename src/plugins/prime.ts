@@ -1,5 +1,5 @@
 import Aura from '@primevue/themes/aura';
-import { Badge, Button, Card, Carousel, Checkbox, Chip, Column, DataTable, DatePicker, Dialog, DialogService, Divider, Drawer, FloatLabel, InputGroup, InputGroupAddon, InputMask, InputNumber, InputText, Paginator, RadioButton, Select, SelectButton, SplitButton, Step, StepItem, StepList, StepPanel, StepPanels, Stepper, Textarea, TieredMenu, ToastService, ToggleSwitch, Tooltip } from 'primevue';
+import { Badge, Button, Card, Carousel, Checkbox, Chip, Column, ConfirmationService, ConfirmDialog, DataTable, DatePicker, Dialog, DialogService, Divider, Drawer, FloatLabel, InputGroup, InputGroupAddon, InputMask, InputNumber, InputText, Paginator, RadioButton, Select, SelectButton, SplitButton, Step, StepItem, StepList, StepPanel, StepPanels, Stepper, Textarea, TieredMenu, ToastService, ToggleSwitch, Tooltip } from 'primevue';
 import Chart from 'primevue/chart';
 import PrimeVue from 'primevue/config';
 import type { App } from 'vue';
@@ -17,9 +17,9 @@ const components = [
   Button, InputText, InputGroup, InputGroupAddon, DataTable, Column, Card, Badge,
   DatePicker, Drawer, TieredMenu, Dialog, Divider, ToggleSwitch, SelectButton,
   Select, RadioButton, SplitButton, Paginator, Chip, Carousel, Chart, InputMask, InputNumber,
-  Checkbox, Stepper, StepPanels, StepList, StepItem, Step, StepPanel, FloatLabel, Textarea
+  Checkbox, Stepper, StepPanels, StepList, StepItem, Step, StepPanel, FloatLabel, Textarea, ConfirmDialog, Divider
 ];
-const services = [DialogService, ToastService];
+const services = [DialogService, ToastService, ConfirmationService];
 const directives = [{
   name: 'tooltip',
   directive: Tooltip

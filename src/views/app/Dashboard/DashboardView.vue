@@ -291,7 +291,7 @@ loadBankAccounts();
           class="card-resume card-resume_danger" />
         <ValuesTotals :value="resumeBills.total_receitas" label="Total de receitas" icon="pi pi-file"
           class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.saldo" label="Previsão de Saldo no mês" icon="pi pi-file" class="card-resume"
+        <ValuesTotals :value="resumeBills.saldo" label="Previsão de Saldo" icon="pi pi-file" class="card-resume"
           :class="resumeBills.saldo <= 0 ? 'card-resume_danger' : 'card-resume_green'" />
         <ValuesTotals :value="bankAccountsSelected?.saldo" :label="'Saldo - ' + bankAccountsSelected?.descricao"
           icon="pi pi-file" class="card-resume"
@@ -317,6 +317,7 @@ loadBankAccounts();
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+  overflow-x: auto;
 }
 
 .card-chart {

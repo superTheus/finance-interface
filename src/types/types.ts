@@ -31,21 +31,20 @@ export interface Bills {
   titulo: string,
   descricao: string,
   valor: number,
-  valor_pago: number,
+  valor_pago?: number,
   tipo: "D" | "R",
   status: "PN" | "PA",
   vencimento: string,
   parcelas?: number,
   num_parcela?: number,
-  conta_agrupada: "N",
+  conta_agrupada?: "S" | "N",
   id_conta_resultante?: number,
   id_original?: number,
   frequencia?: number,
   total_parcelas?: number,
   modo_pagamento?: "T" | "P",
   data_pagamento?: string,
-  deletado?: "N" | "S",
-  dthr_registro: string
+  deletado?: "N" | "S"
 }
 
 export type BillsForm = {

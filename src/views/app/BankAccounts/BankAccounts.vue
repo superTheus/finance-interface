@@ -147,7 +147,7 @@ loadBankAccounts();
   </Card>
 
   <Dialog :header="isEdit ? 'Editar Conta Bancária' : 'Nova Conta Bancária'" :visible="isDialogVisible" modal
-    :closable="false" style="width: 40vw">
+    :closable="false" class="w-full md:w-6 lg:w-4 xl:w-3">
     <div class="p-fluid">
       <div class="p-field flex flex-column gap-1">
         <label for="descricao">Descrição</label>

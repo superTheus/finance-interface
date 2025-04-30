@@ -19,6 +19,7 @@ onMounted(() => {
 
 <template>
   <Toast position="bottom-right" />
+  <ConfirmDialog />
   <DynamicDialog />
   <RouterView />
 </template>

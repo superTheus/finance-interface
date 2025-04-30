@@ -11,5 +11,16 @@ export const useConfigStore = defineStore('config', () => {
     config.value = data
   }
 
-  return { config, setConfig }
+  function changeTheme() {
+    config.value.darkMode = !config.value.darkMode
+
+    saveConfig(config.value)
+    if (config.value.darkMode) {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  }
+
+  return { config, setConfig, changeTheme }
 })

@@ -1,126 +1,12 @@
 @use './base' as base;
-
-.container {
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--main-container-bg);
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    width: 500px;
-    height: 500px;
-    border-radius: 50%;
-    background: var(--gradint-container);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    filter: blur(100px);
-  }
-}
+@use './layout' as layout;
+@use './responsive' as responsive;
 
 .label {
   display: block;
   margin-bottom: 0.1rem !important;
   font-size: 1rem !important;
   color: var(--p-text-color) !important;
-}
-
-.app-grid {
-  display: grid;
-  grid-template-areas:
-    "sidebar header"
-    "sidebar main";
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  height: 100vh;
-  background-color: var(--main-background-color);
-  transition: background-color 0.3s ease-in-out;
-  padding: 1rem;
-}
-
-.header {
-  grid-area: header;
-  padding: 1rem;
-  background-color: transparent;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  z-index: 10;
-
-  .btn {
-    background-color: var(--main-background-color);
-    color: var(--inverter-background-color);
-    border: 1px solid var(--background-color) !important;
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 1s ease-in-out !important;
-    font-size: 1rem;
-
-    &:hover {
-      border: 1px solid var(--inverter-background-color) !important;
-      background-color: var(--main-background-color) !important;
-      color: var(--inverter-background-color) !important;
-    }
-
-    &:active {
-      border: 1px solid var(--inverter-background-color);
-    }
-  }
-}
-
-.sidebar {
-  grid-area: sidebar;
-  padding: 0.5rem;
-
-  z-index: 10;
-
-  div {
-    padding: 1rem;
-    background-color: var(--sidebar-color);
-    height: 100%;
-    border-radius: 10px;
-
-    ul {
-      list-style: none;
-      padding: 0;
-
-      li {
-        margin: 0 0 1rem 0;
-
-        .menu-item {
-          border: none;
-          cursor: pointer;
-          width: 45px;
-          height: 45px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-
-          &:hover {
-            background-color: var(--sidebar-color-item-hover);
-          }
-        }
-
-        .menu-item.active {
-          background-color: var(--inverter-background-color);
-          color: var(--main-background-color);
-
-        }
-      }
-    }
-  }
-}
-
-.main-content {
-  grid-area: main;
-  padding: 1rem;
-  overflow: auto;
-  z-index: 10;
 }
 
 .card-resume {
@@ -180,6 +66,22 @@
   width: 50% !important;
 }
 
+.header-title {
+  .actions {
+    @include responsive.breakpoint(md) {
+      display: none !important;
+    }
+  }
+
+  .btn-menu {
+    @include responsive.breakpoint(md) {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
 @media screen and (max-width: 768px) {
   .card-resume {
     width: 45%;
@@ -191,4 +93,78 @@
   $g: green($hex);
   $b: blue($hex);
   @return rgba($r, $g, $b, $alpha);
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1;
+  max-width: 1700px;
+  margin: 0 auto;
+
+  .right-container {
+    padding: 3rem;
+    width: 40%;
+    height: 100vh;
+
+    h1 {
+      text-align: justify;
+    }
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+
+    @include responsive.breakpoint(md) {
+      width: 80% !important;
+      margin: auto;
+    }
+
+    @include responsive.breakpoint(sm) {
+      width: 100% !important;
+      margin: auto;
+    }
+  }
+
+  .left-container {
+    width: 60%;
+    height: 100vh;
+    z-index: 10;
+    padding: 2rem 3rem;
+    display: flex;
+
+    .card-container {
+      border-radius: 2rem;
+      background-color: var(--main-background-color);
+      height: 100%;
+      padding: 2rem 2rem 0.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      max-width: 50rem;
+    }
+
+    @include responsive.breakpoint(md) {
+      display: none !important;
+    }
+  }
+
+  .carousel-item {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+
+      max-height: 150px;
+    }
+  }
 }

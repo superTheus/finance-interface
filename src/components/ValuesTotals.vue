@@ -14,7 +14,7 @@ const utils = new Utils();
 </script>
 
 <template>
-  <Card :class="props.class">
+  <Card :class="'main ' + props.class">
     <template #content>
       <div class="text-center">
         <h2> {{ utils.formatCurrency(props.value || 0) }} </h2>
@@ -23,3 +23,9 @@ const utils = new Utils();
     </template>
   </Card>
 </template>
+
+<style scoped lang="scss">
+.main {
+  min-width: 12em !important;
+}
+</style>
