@@ -193,7 +193,8 @@ const changeTheme = () => {
           </div>
 
           <div class="mt-4">
-            <small> Não tem login ? <a href="#" class="simple-link text-success text-strong" @click="isRegisterMode = true"> clique aqui </a> </small>
+            <small> Não tem login ? <a href="#" class="simple-link text-success text-strong"
+                @click="isRegisterMode = true"> clique aqui </a> </small>
           </div>
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="mt-4 w-full" :loading="loading" />
@@ -213,10 +214,11 @@ const changeTheme = () => {
           <div class="flex flex-column gap-1 mt-3">
             <label for="pass" class="label">Senha</label>
             <InputGroup>
-              <InputText :type="formRegister.showPass ? 'text' : 'password'" name="pass" v-model="formRegister.pass" placeholder="******" />
+              <InputText :type="formRegister.showPass ? 'text' : 'password'" name="pass" v-model="formRegister.pass"
+                placeholder="******" />
               <InputGroupAddon>
-                <Button :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" variant="text"
-                  @click="formRegister.showPass = !formRegister.showPass" />
+                <Button :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary"
+                  variant="text" @click="formRegister.showPass = !formRegister.showPass" />
               </InputGroupAddon>
             </InputGroup>
           </div>
@@ -224,12 +226,18 @@ const changeTheme = () => {
           <div class="flex flex-column gap-1 mt-3">
             <label for="pass" class="label">Confirmar Senha</label>
             <InputGroup>
-              <InputText :type="formRegister.showConfirmPass ? 'text' : 'password'" name="pass" v-model="formRegister.confirmPass" placeholder="******" />
+              <InputText :type="formRegister.showConfirmPass ? 'text' : 'password'" name="pass"
+                v-model="formRegister.confirmPass" placeholder="******" />
               <InputGroupAddon>
-                <Button :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" variant="text"
-                  @click="formRegister.showConfirmPass = !formRegister.showConfirmPass" />
+                <Button :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary"
+                  variant="text" @click="formRegister.showConfirmPass = !formRegister.showConfirmPass" />
               </InputGroupAddon>
             </InputGroup>
+          </div>
+
+          <div class="mt-4">
+            <small> Já tem login ? <a href="#" class="simple-link text-success text-strong"
+                @click="isRegisterMode = false"> clique aqui </a> </small>
           </div>
 
           <Button type="submit" label="Cadastrar" class="mt-4 w-full" :loading="loading" />
