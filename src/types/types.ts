@@ -19,6 +19,8 @@ export interface User {
   dthr_atualizacao: string
 }
 
+export type PartialUser = Partial<User>;
+
 export interface Config {
   darkMode: boolean
 }

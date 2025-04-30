@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBankAccounts, PartialBills, PaymentsForms, ResumeBills, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBankAccounts, PartialBills, PartialUser, PaymentsForms, ResumeBills, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -19,6 +19,18 @@ export class Api {
           email: email,
           senha: password
         });
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response.data);
+      }
+    })
+  }
+
+  createUser(user: PartialUser): Promise<User> {
+    return new Promise<User>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/user/create', user);
 
         resolve(response.data);
       } catch (error: any) {

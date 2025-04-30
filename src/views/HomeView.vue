@@ -17,9 +17,19 @@ const pass = ref('');
 const toast = useToast();
 const showPass = ref(false);
 const loading = ref(false);
+const isRegisterMode = ref(false);
 const userStore = useUserStore();
 const api = new Api();
 const isDarkMode = ref(config.config?.darkMode);
+
+const formRegister = ref({
+  name: '',
+  email: '',
+  pass: '',
+  confirmPass: '',
+  showPass: false,
+  showConfirmPass: false,
+});
 
 const itemsCarousel = ref([
   {
@@ -55,6 +65,46 @@ const login = async () => {
 
     userStore.setUser(data);
     router.push({ name: 'Dashboard' });
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: error.message,
+      life: 3000,
+    });
+  } finally {
+    loading.value = false;
+  }
+};
+
+const create = async () => {
+  try {
+    if(formRegister.value.pass !== formRegister.value.confirmPass) {
+      toast.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'As senhas não conferem',
+        life: 3000,
+      });
+      return;
+    }
+
+    loading.value = true;
+
+    await api.createUser({
+      nome: formRegister.value.name,
+      email: formRegister.value.email,
+      senha: formRegister.value.pass,
+    });
+
+    toast.add({
+      severity: 'success',
+      summary: 'Sucesso',
+      detail: 'Cadastro efetuado com sucesso',
+      life: 3000,
+    });
+
+    isRegisterMode.value = false;
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -119,7 +169,7 @@ const changeTheme = () => {
       </div>
 
       <div class="right-container">
-        <form @submit.prevent="login">
+        <form v-if="!isRegisterMode" @submit.prevent="login">
           <div class="flex flex-column gap-1 mt-3">
             <h1>Gerencie suas <span class="text-success text-strong"> finanças </span> com facilidade e <span
                 class="text-success text-strong"> eficiência! </span> 💰</h1>
@@ -143,10 +193,46 @@ const changeTheme = () => {
           </div>
 
           <div class="mt-4">
-            <small> Não tem login ? <a href="#" class="simple-link text-success text-strong"> clique aqui </a> </small>
+            <small> Não tem login ? <a href="#" class="simple-link text-success text-strong" @click="isRegisterMode = true"> clique aqui </a> </small>
           </div>
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="mt-4 w-full" :loading="loading" />
+        </form>
+
+        <form class="w-full" v-if="isRegisterMode" @submit.prevent="create">
+          <div class="flex flex-column gap-1 mt-3">
+            <label for="name" class="label">Nome</label>
+            <InputText type="text" name="name" v-model="formRegister.name" placeholder="Ex: Matheus Souza" />
+          </div>
+
+          <div class="flex flex-column gap-1 mt-3">
+            <label for="email" class="label">Email</label>
+            <InputText type="email" name="email" v-model="formRegister.email" placeholder="exemplo@mail.com" />
+          </div>
+
+          <div class="flex flex-column gap-1 mt-3">
+            <label for="pass" class="label">Senha</label>
+            <InputGroup>
+              <InputText :type="formRegister.showPass ? 'text' : 'password'" name="pass" v-model="formRegister.pass" placeholder="******" />
+              <InputGroupAddon>
+                <Button :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" variant="text"
+                  @click="formRegister.showPass = !formRegister.showPass" />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+
+          <div class="flex flex-column gap-1 mt-3">
+            <label for="pass" class="label">Confirmar Senha</label>
+            <InputGroup>
+              <InputText :type="formRegister.showConfirmPass ? 'text' : 'password'" name="pass" v-model="formRegister.confirmPass" placeholder="******" />
+              <InputGroupAddon>
+                <Button :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" variant="text"
+                  @click="formRegister.showConfirmPass = !formRegister.showConfirmPass" />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+
+          <Button type="submit" label="Cadastrar" class="mt-4 w-full" :loading="loading" />
         </form>
       </div>
     </div>
