@@ -248,18 +248,18 @@ const updateBill = () => {
 
   const bill = { ...accountSelected.value }
 
-  if (isEditMode) {
+  if (isEditMode.value) {
     bill.titulo = formAccount.value.titulo,
-      bill.tipo = formAccount.value.tipo,
-      bill.valor = formAccount.value.valor,
-      bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
-      bill.descricao = formAccount.value.descricao || ''
+    bill.tipo = formAccount.value.tipo,
+    bill.valor = formAccount.value.valor,
+    bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
+    bill.descricao = formAccount.value.descricao || ''
   } else {
     bill.status = 'PA',
-      bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
-      bill.id_conta_bancaria = formPayment.value.bankAccount.id,
-      bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
-      bill.valor_pago = formPayment.value.valorPago
+    bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
+    bill.id_conta_bancaria = formPayment.value.bankAccount.id,
+    bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
+    bill.valor_pago = formPayment.value.valorPago
   }
 
   api.updateBills(accountSelected.value?.id || 0, bill).then(() => {
