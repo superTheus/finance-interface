@@ -55,7 +55,6 @@ const login = async () => {
     loading.value = true;
 
     const data = await api.login(email.value, pass.value);
-
     toast.add({
       severity: 'success',
       summary: 'Sucesso',

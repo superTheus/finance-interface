@@ -8,7 +8,9 @@ export class Api {
     this.instance = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
       timeout: 10000,
-      headers: { 'X-Custom-Header': 'foobar' }
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
   }
 
@@ -22,7 +24,7 @@ export class Api {
 
         resolve(response.data);
       } catch (error: any) {
-        reject(error.response.data);
+        reject(error.response?.data || error.response || error);
       }
     })
   }
