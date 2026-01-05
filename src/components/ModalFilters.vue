@@ -84,7 +84,7 @@ const applyFilters = () => {
           <label for="all">Todos</label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.statusFilter" input-id="pendentes" name="pendentes" value="PN" />
+          <RadioButton v-model="props.filterSelected.statusFilter" input-id="pendentes" name="pendentes" value="PE" />
           <label for="pendentes">Pendentes</label>
         </div>
         <div class="flex items-center gap-2">

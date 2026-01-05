@@ -37,7 +37,7 @@ const formAccount = ref<{
     name: string;
     value: string;
   }[];
-  status: 'PA' | 'PN';
+  status: 'PA' | 'PE';
   data_pagamento?: Date;
   valor_pago?: number;
   contaParcelada?: "S" | "N";
@@ -52,10 +52,10 @@ const formAccount = ref<{
   tipo: "D",
   titulo: '',
   valor: 0,
-  status: 'PN',
+  status: 'PE',
   pagoOptions: [
     { name: 'Pago', value: 'PA' },
-    { name: 'Pendente', value: 'PN' }
+    { name: 'Pendente', value: 'PE' }
   ],
   contaParcelada: "N",
   contaFrequente: "N",
@@ -67,16 +67,18 @@ const formAccount = ref<{
 const filter = ref<BillsRequest>({
   filter: {
     id_usuario: user.user?.id || 0,
-    deletado: 'N'
+    deletado: 'N',
+    vencimento: {
+      'BETWEEN': [
+        moment().startOf('month').format('YYYY-MM-DD'),
+        moment().endOf('month').format('YYYY-MM-DD')
+      ]
+    }
   },
   limit: 5,
   offset: 0,
-  date_ranger: {
-    start_date: moment().startOf('month').format('YYYY-MM-DD'),
-    end_date: moment().endOf('month').format('YYYY-MM-DD')
-  },
   order: {
-    cols: ["vencimento", "id"],
+    cols: ["vencimento"],
     direction: "ASC"
   }
 });
@@ -97,12 +99,18 @@ const filterOptions = ref<FilterBill>({
 });
 
 const resumeBills = ref<ResumeBills>({
-  total_falta_pagar: 0,
-  total_falta_receber: 0,
-  total_receitas: 0,
-  total_despesas: 0,
-  total_recebido: 0,
-  total_pago: 0,
+  quantidadeFaltaPagar: 0,
+  quantidadePaga: 0,
+  quantidadeTotalPagar: 0,
+  quantidadeFaltaReceber: 0,
+  quantidadeRecebida: 0,
+  quantidadeTotalReceber: 0,
+  totalPagar: 0,
+  totalFaltaPagar: 0,
+  totalPago: 0,
+  totalReceber: 0,
+  totalFaltaReceber: 0,
+  totalRecebido: 0,
   saldo: 0
 });
 
@@ -151,25 +159,27 @@ function loadBills() {
 
 function loadResumes() {
   api.resumes({
-    date_ranger: filter.value.date_ranger || {
-      start_date: moment().startOf('month').format('YYYY-MM-DD'),
-      end_date: moment().endOf('month').format('YYYY-MM-DD')
-    },
-    filter: filter.value.filter || {
-      id_usuario: user.user?.id || 0
-    }
+    inicio: filter.value.date_ranger?.start_date || moment().startOf('month').format('YYYY-MM-DD'),
+    fim: filter.value.date_ranger?.end_date || moment().endOf('month').format('YYYY-MM-DD'),
+    usuario: filter.value.filter?.id_usuario || user.user?.id || 0
   }).then((data) => {
     resumeBills.value = data;
   }).catch(() => {
     resumeBills.value = {
-      total_falta_pagar: 0,
-      total_falta_receber: 0,
-      total_receitas: 0,
-      total_despesas: 0,
-      total_recebido: 0,
-      total_pago: 0,
+      quantidadeFaltaPagar: 0,
+      quantidadePaga: 0,
+      quantidadeTotalPagar: 0,
+      quantidadeFaltaReceber: 0,
+      quantidadeRecebida: 0,
+      quantidadeTotalReceber: 0,
+      totalPagar: 0,
+      totalFaltaPagar: 0,
+      totalPago: 0,
+      totalReceber: 0,
+      totalFaltaReceber: 0,
+      totalRecebido: 0,
       saldo: 0
-    };
+    }
   });
 }
 
@@ -180,7 +190,7 @@ function loadAllData() {
     api.payments(),
     api.findBankAccounts({
       filter: {
-        id_user: user.user?.id || 0
+        id_usuario: user.user?.id || 0
       }
     })
   ]).then(([payments, accounts]) => {
@@ -205,13 +215,13 @@ const createBill = () => {
   }
 
   if (formAccount.value.contaParcelada === 'S') {
-    bill.total_parcelas = formAccount.value.total_parcelas;
-    bill.status = 'PN';
+    bill.parcelas = formAccount.value.total_parcelas;
+    bill.status = 'PE';
   }
 
   if (formAccount.value.contaFrequente === 'S') {
     bill.frequencia = formAccount.value.frequencia;
-    bill.status = 'PN';
+    bill.status = 'PE';
   }
 
   if (formAccount.value.status === "PA") {
@@ -250,16 +260,16 @@ const updateBill = () => {
 
   if (isEditMode.value) {
     bill.titulo = formAccount.value.titulo,
-    bill.tipo = formAccount.value.tipo,
-    bill.valor = formAccount.value.valor,
-    bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
-    bill.descricao = formAccount.value.descricao || ''
+      bill.tipo = formAccount.value.tipo,
+      bill.valor = formAccount.value.valor,
+      bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
+      bill.descricao = formAccount.value.descricao || ''
   } else {
     bill.status = 'PA',
-    bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
-    bill.id_conta_bancaria = formPayment.value.bankAccount.id,
-    bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
-    bill.valor_pago = formPayment.value.valorPago
+      bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
+      bill.id_conta_bancaria = formPayment.value.bankAccount.id,
+      bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
+      bill.valor_pago = formPayment.value.valorPago
   }
 
   api.updateBills(accountSelected.value?.id || 0, bill).then(() => {
@@ -407,7 +417,7 @@ watch(bills, () => {
   items.value = data.map((bill) => {
     const items = []
 
-    if (bill.status === 'PN') {
+    if (bill.status === 'PE') {
       items.push({
         label: 'Dar baixa',
         icon: 'pi pi-arrow-circle-down',
@@ -432,7 +442,7 @@ watch(bills, () => {
           formAccount.value.tipo = bill.tipo;
           formAccount.value.titulo = bill.titulo;
           formAccount.value.valor = bill.valor;
-          formAccount.value.vencimento = moment(bill.vencimento).toDate();
+          formAccount.value.vencimento = moment(bill.vencimento as string).toDate();
           formAccount.value.descricao = bill.descricao || '';
         }
       },
@@ -490,13 +500,13 @@ loadAllData();
       </div>
 
       <div class="card-resume-container mt-3">
-        <ValuesTotals :value="resumeBills.total_despesas" label="Total de despesas" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-file"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.total_receitas" label="Total de receitas" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-file"
           class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.total_falta_pagar" label="Total falta pagar" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Total falta pagar" icon="pi pi-file"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.total_falta_receber" label="Total falta receber" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Total falta receber" icon="pi pi-file"
           class="card-resume card-resume_green" />
       </div>
 

@@ -1,10 +1,11 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, PartialBankAccounts, PartialBills, PartialUser, PaymentsForms, ResumeBills, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
   private instance!: AxiosInstance;
 
   constructor() {
+    console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
     this.instance = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
       timeout: 10000,
@@ -32,7 +33,7 @@ export class Api {
   createUser(user: PartialUser): Promise<User> {
     return new Promise<User>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/user/create', user);
+        const response = await this.instance.post('/root/usuarios/criar', user);
 
         resolve(response.data);
       } catch (error: any) {
@@ -50,7 +51,7 @@ export class Api {
       data: Bills[]
     }>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/contas/list', filters);
+        const response = await this.instance.post('/private/contas/listar', filters);
         resolve(response.data);
       } catch (error: any) {
         reject(error.response.data);
@@ -61,7 +62,7 @@ export class Api {
   createBills(bill: PartialBills): Promise<Bills> {
     return new Promise<Bills>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post(`/contas/create`, bill);
+        const response = await this.instance.post(`/private/contas/criar`, bill);
         resolve(response.data);
       } catch (error: any) {
         reject(error.response.data);
@@ -72,7 +73,7 @@ export class Api {
   updateBills(id: number, bill: PartialBills): Promise<Bills> {
     return new Promise<Bills>(async (resolve, reject) => {
       try {
-        const response = await this.instance.put(`/contas/update/${id}`, bill);
+        const response = await this.instance.put(`/private/contas/atualizar/${id}`, bill);
         resolve(response.data);
       } catch (error: any) {
         reject(error.response.data);
@@ -81,15 +82,13 @@ export class Api {
   }
 
   resumes(data: {
-    date_ranger: {
-      start_date: string,
-      end_date: string
-    },
-    filter: PartialBills
+    inicio: string,
+    fim: string,
+    usuario: number
   }): Promise<ResumeBills> {
     return new Promise<ResumeBills>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/resumes/values', data);
+        const response = await this.instance.post('/private/resumos/geral', data);
 
         resolve(response.data);
       } catch (error: any) {
@@ -103,7 +102,7 @@ export class Api {
       try {
         const response = await this.instance.get('/payments-forms');
 
-        resolve(response.data);
+        resolve(response.data.data);
       } catch (error: any) {
         reject(error.response);
       }
@@ -119,7 +118,7 @@ export class Api {
       data: BankAccounts[]
     }>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/bank-account/list', filter);
+        const response = await this.instance.post('/private/contas-bancarias/listar', filter);
 
         resolve(response.data);
       } catch (error: any) {
@@ -131,7 +130,7 @@ export class Api {
   createBankAccount(data: PartialBankAccounts): Promise<BankAccounts> {
     return new Promise<BankAccounts>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/bank-account/create', data);
+        const response = await this.instance.post('/private/contas-bancarias/criar', data);
 
         resolve(response.data);
       } catch (error: any) {
@@ -143,7 +142,49 @@ export class Api {
   updateBankAccount(id: number, data: PartialBankAccounts): Promise<BankAccounts> {
     return new Promise<BankAccounts>(async (resolve, reject) => {
       try {
-        const response = await this.instance.put(`/bank-account/update/${id}`, data);
+        const response = await this.instance.put(`/private/contas-bancarias/atualizar/${id}`, data);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  findCategories(filter: CategoriesRequest): Promise<{
+    total: number,
+    data: Categories[]
+  }> {
+    return new Promise<{
+      total: number,
+      data: Categories[]
+    }>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/private/contas-bancarias/listar', filter);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  createCategory(data: Categories): Promise<Categories> {
+    return new Promise<Categories>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/private/categorias/criar', data);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  updateCategory(id: number, data: PartialCategories): Promise<Categories> {
+    return new Promise<Categories>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.put(`/private/categorias/atualizar/${id}`, data);
 
         resolve(response.data);
       } catch (error: any) {

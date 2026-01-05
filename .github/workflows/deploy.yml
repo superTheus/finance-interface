@@ -1,0 +1,51 @@
+name: CI / Build & Deploy (Vue -> VPS)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USERNAME }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+      TARGET_DIR: ${{ secrets.TARGET_DIR }}
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env.production with VITE_API_BASE_URL
+        run: |
+          echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env.production
+          echo "Contents of .env.production:"
+          sed -n '1,50p' .env.production
+
+      - name: Build (production)
+        run: npm run build
+
+      - name: Add SSH key and known_hosts
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
+      - name: Rsync dist to server
+        run: |
+          # -e "ssh -p $SSH_PORT" -> use specific ssh port
+          rsync -avz --delete -e "ssh -p ${SSH_PORT}" ./dist/ ${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/ --rsync-path="sudo rsync"
+
+      - name: Fix permissions on server
+        run: |
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} "sudo chown -R www:www ${TARGET_DIR} || true; sudo find ${TARGET_DIR} -type d -exec chmod 755 {} \\; ; sudo find ${TARGET_DIR} -type f -exec chmod 644 {} \\;"
