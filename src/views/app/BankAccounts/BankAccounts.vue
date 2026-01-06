@@ -23,7 +23,7 @@ const form = ref({
 function loadBankAccounts() {
   api.findBankAccounts({
     filter: {
-      id_user: user.user?.id || 0
+      id_usuario: user.user?.id || 0
     }
   }).then((data) => {
     bankAccounts.value = data.data;

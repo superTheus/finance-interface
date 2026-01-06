@@ -26,12 +26,18 @@ const mounthSelected = ref(0);
 const currentMounth = ref(mounths.find(m => m.value === moment().month() + 1)?.value || 0);
 
 const resumeBills = ref<ResumeBills>({
-  total_falta_pagar: 0,
-  total_falta_receber: 0,
-  total_receitas: 0,
-  total_despesas: 0,
-  total_recebido: 0,
-  total_pago: 0,
+  totalPagar: 0,
+  totalFaltaPagar: 0,
+  totalPago: 0,
+  totalReceber: 0,
+  totalFaltaReceber: 0,
+  totalRecebido: 0,
+  quantidadeFaltaPagar: 0,
+  quantidadePaga: 0,
+  quantidadeTotalPagar: 0,
+  quantidadeFaltaReceber: 0,
+  quantidadeRecebida: 0,
+  quantidadeTotalReceber: 0,
   saldo: 0
 });
 
@@ -88,24 +94,26 @@ function loadBills() {
 
 function loadResumes() {
   api.resumes({
-    date_ranger: filterResume.value.date_ranger || {
-      start_date: moment().startOf('month').format('YYYY-MM-DD'),
-      end_date: moment().endOf('month').format('YYYY-MM-DD')
-    },
-    filter: filterResume.value.filter || {
-      id_usuario: user.user?.id || 0
-    }
+    fim: filterResume.value.date_ranger?.end_date || moment().endOf('month').format('YYYY-MM-DD'),
+    inicio: filterResume.value.date_ranger?.start_date || moment().startOf('month').format('YYYY-MM-DD'),
+    usuario: user.user?.id || 0
   }).then((data) => {
     resumeBills.value = data;
   }).catch(() => {
     resumeBills.value = {
-      total_falta_pagar: 0,
-      total_falta_receber: 0,
-      total_receitas: 0,
-      total_despesas: 0,
-      total_pago: 0,
-      total_recebido: 0,
-      saldo: 0,
+      totalPagar: 0,
+      totalFaltaPagar: 0,
+      totalPago: 0,
+      totalReceber: 0,
+      totalFaltaReceber: 0,
+      totalRecebido: 0,
+      quantidadeFaltaPagar: 0,
+      quantidadePaga: 0,
+      quantidadeTotalPagar: 0,
+      quantidadeFaltaReceber: 0,
+      quantidadeRecebida: 0,
+      quantidadeTotalReceber: 0,
+      saldo: 0
     };
   });
 }
@@ -113,7 +121,7 @@ function loadResumes() {
 function loadBankAccounts() {
   api.findBankAccounts({
     filter: {
-      id_user: user.user?.id || 0
+      id_usuario: user.user?.id || 0
     }
   }).then((data) => {
     bankAccounts.value = data.data;
@@ -121,67 +129,67 @@ function loadBankAccounts() {
   });
 }
 
-const setChartData = (bills: Bills[]) => {
-  let payments = bills.filter(bill => bill.tipo === 'D');
-  let receipts = bills.filter(bill => bill.tipo === 'R');
+// const setChartData = (bills: Bills[]) => {
+//   let payments = bills.filter(bill => bill.tipo === 'D');
+//   let receipts = bills.filter(bill => bill.tipo === 'R');
 
-  var labels: string[] = [];
+//   var labels: string[] = [];
 
-  filterType.value === 'm' ? labels.push(...mounths.map(m => m.label)) : labels.push(...utils.getDaysInMonth(mounthSelected.value, moment().year()).map(d => d.label));
+//   filterType.value === 'm' ? labels.push(...mounths.map(m => m.label)) : labels.push(...utils.getDaysInMonth(mounthSelected.value, moment().year()).map(d => d.label));
 
-  let values = filterType.value === 'm' ? mounths.map(mounth => {
-    let billsPayments = payments.filter(bill => moment(bill.vencimento).month() === mounth.value - 1);
-    let billsReceipts = receipts.filter(bill => moment(bill.vencimento).month() === mounth.value - 1);
+//   let values = filterType.value === 'm' ? mounths.map(mounth => {
+//     let billsPayments = payments.filter(bill => moment(bill.vencimento).month() === mounth.value - 1);
+//     let billsReceipts = receipts.filter(bill => moment(bill.vencimento).month() === mounth.value - 1);
 
-    return {
-      payments: billsPayments.reduce((acc, bill) => acc + Number(bill.valor), 0) * -1,
-      receipts: billsReceipts.reduce((acc, bill) => acc + Number(bill.valor), 0)
-    }
-  }) : utils.getDaysInMonth(mounthSelected.value, moment().year()).map(day => {
-    let billsPayments = payments.filter(bill => moment(bill.vencimento).date() === day.value);
-    let billsReceipts = receipts.filter(bill => moment(bill.vencimento).date() === day.value);
+//     return {
+//       payments: billsPayments.reduce((acc, bill) => acc + Number(bill.valor), 0) * -1,
+//       receipts: billsReceipts.reduce((acc, bill) => acc + Number(bill.valor), 0)
+//     }
+//   }) : utils.getDaysInMonth(mounthSelected.value, moment().year()).map(day => {
+//     let billsPayments = payments.filter(bill => moment(bill.vencimento).date() === day.value);
+//     let billsReceipts = receipts.filter(bill => moment(bill.vencimento).date() === day.value);
 
-    return {
-      payments: billsPayments.reduce((acc, bill) => acc + Number(bill.valor), 0) * -1,
-      receipts: billsReceipts.reduce((acc, bill) => acc + Number(bill.valor), 0)
-    }
-  });
+//     return {
+//       payments: billsPayments.reduce((acc, bill) => acc + Number(bill.valor), 0) * -1,
+//       receipts: billsReceipts.reduce((acc, bill) => acc + Number(bill.valor), 0)
+//     }
+//   });
 
-  if (filterType.value === 'd') {
-    let indexToRemove: number[] = [];
+//   if (filterType.value === 'd') {
+//     let indexToRemove: number[] = [];
 
-    labels.forEach((label, index) => {
-      if (values[index].payments === 0 && values[index].receipts === 0) {
-        indexToRemove.push(index);
-      }
-    });
+//     labels.forEach((label, index) => {
+//       if (values[index].payments === 0 && values[index].receipts === 0) {
+//         indexToRemove.push(index);
+//       }
+//     });
 
-    const newLabels = labels.filter((label, index) => !indexToRemove.includes(index));
-    const newValues = values.filter((value, index) => !indexToRemove.includes(index));
-    labels = newLabels;
-    values = newValues;
-  }
+//     const newLabels = labels.filter((label, index) => !indexToRemove.includes(index));
+//     const newValues = values.filter((value, index) => !indexToRemove.includes(index));
+//     labels = newLabels;
+//     values = newValues;
+//   }
 
-  return {
-    labels: labels,
-    datasets: [
-      {
-        label: 'Despesas',
-        data: values.map(v => v.payments),
-        backgroundColor: ['rgba(255, 99, 132, 0.8)'],
-        borderColor: ['rgb(255, 99, 132)'],
-        borderWidth: 1
-      },
-      {
-        label: 'Receitas',
-        data: values.map(v => v.receipts),
-        backgroundColor: ['rgba(75, 192, 192, 0.8)'],
-        borderColor: ['rgb(75, 192, 192)'],
-        borderWidth: 1
-      }
-    ]
-  };
-};
+//   return {
+//     labels: labels,
+//     datasets: [
+//       {
+//         label: 'Despesas',
+//         data: values.map(v => v.payments),
+//         backgroundColor: ['rgba(255, 99, 132, 0.8)'],
+//         borderColor: ['rgb(255, 99, 132)'],
+//         borderWidth: 1
+//       },
+//       {
+//         label: 'Receitas',
+//         data: values.map(v => v.receipts),
+//         backgroundColor: ['rgba(75, 192, 192, 0.8)'],
+//         borderColor: ['rgb(75, 192, 192)'],
+//         borderWidth: 1
+//       }
+//     ]
+//   };
+// };
 
 const setChartOptions = () => {
   const documentStyle = getComputedStyle(document.documentElement);
@@ -221,10 +229,10 @@ const setChartOptions = () => {
   };
 }
 
-watch(bills, (newVal: Bills[]) => {
-  chartData.value = setChartData(newVal);
-  chartOptions.value = setChartOptions();
-});
+// watch(bills, (newVal: Bills[]) => {
+//   chartData.value = setChartData(newVal);
+//   chartOptions.value = setChartOptions();
+// });
 
 watch(filterResumeReiod, (newVal) => {
   filterResume.value.date_ranger = {
@@ -286,7 +294,7 @@ loadBankAccounts();
         <Select v-model="currentMounth" :options="monthsSelected.slice(1)" optionLabel="name" option-value="code" placeholder="Selecione um mês" />
       </div>
 
-      <div class="card-resume-container my-3">
+      <!-- <div class="card-resume-container my-3">
         <ValuesTotals :value="resumeBills.total_despesas" label="Total de despesas" icon="pi pi-file"
           class="card-resume card-resume_danger" />
         <ValuesTotals :value="resumeBills.total_receitas" label="Total de receitas" icon="pi pi-file"
@@ -307,7 +315,7 @@ loadBankAccounts();
         <div v-if="!loading" class="card-chart">
           <Chart class="chart" type="bar" :data="chartData" :options="chartOptions" />
         </div>
-      </div>
+      </div> -->
     </template>
   </Card>
 </template>
