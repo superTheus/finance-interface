@@ -151,7 +151,26 @@ const ChipsFilter = ref<{
 }]);
 
 function loadBills() {
-  api.findBills(filter.value).then((data) => {
+  console.log('Loading bills with filter:', filter.value);
+  api.findBills({
+    filter: {
+      ...filter.value.filter,
+      vencimento: filter.value.date_ranger ? {
+        'BETWEEN': [
+          filter.value.date_ranger.start_date,
+          filter.value.date_ranger.end_date
+        ]
+      } : {
+        'BETWEEN': [
+          moment().startOf('month').format('YYYY-MM-DD'),
+          moment().endOf('month').format('YYYY-MM-DD')
+        ]
+      }
+    },
+    limit: filter.value.limit,
+    offset: filter.value.offset,
+    order: filter.value.order,
+  }).then((data) => {
     total.value = data.total;
     bills.value = data.data;
   });
