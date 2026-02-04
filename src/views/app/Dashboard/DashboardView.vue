@@ -106,6 +106,18 @@ const chartData = computed(() => {
   };
 });
 
+const formatQuantity = (value: number) => value.toLocaleString('pt-BR');
+
+const resumeSummaryRows = computed(() => ([
+  { label: 'Total pagar', value: `${utils.formatCurrency(resumeBills.value.totalPagar) } (${formatQuantity(resumeBills.value.quantidadeTotalPagar)})` },
+  { label: 'Falta pagar', value: `${utils.formatCurrency(resumeBills.value.totalFaltaPagar) } (${formatQuantity(resumeBills.value.quantidadeFaltaPagar)}/${formatQuantity(resumeBills.value.quantidadeTotalPagar)})` },
+  { label: 'Total pago', value: `${utils.formatCurrency(resumeBills.value.totalPago)} (${formatQuantity(resumeBills.value.quantidadePaga)}/${formatQuantity(resumeBills.value.quantidadeTotalPagar)})` },
+  { label: 'Total receber', value: `${utils.formatCurrency(resumeBills.value.totalReceber)} (${formatQuantity(resumeBills.value.quantidadeTotalReceber)})` },
+  { label: 'Falta receber', value: `${utils.formatCurrency(resumeBills.value.totalFaltaReceber) } (${formatQuantity(resumeBills.value.quantidadeFaltaReceber)}/${formatQuantity(resumeBills.value.quantidadeTotalReceber)})` },
+  { label: 'Total recebido', value: `${utils.formatCurrency(resumeBills.value.totalRecebido)} (${formatQuantity(resumeBills.value.quantidadeRecebida)}/${formatQuantity(resumeBills.value.quantidadeTotalReceber)})`},
+  { label: 'Saldo Previsão', value: utils.formatCurrency(resumeBills.value.saldo) }
+]));
+
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -310,12 +322,31 @@ loadBankAccounts();
           :class="(bankAccountsSelected?.saldo || 0) > 0 ? 'card-resume_green' : 'card-resume_danger'" />
       </div>
 
-      <div class="chart-container mt-4">
-        <div class="flex justify-content-between align-items-center">
-          <h3> Contas - Ano </h3>
+      <div class="dashboard-grid grid mt-4">
+        <div class="col-12 md:col-9">
+          <Card class="dashboard-chart-card">
+            <template #title>
+              <h3>Contas - Ano</h3>
+            </template>
+            <template #content>
+              <div v-if="!loading" class="card-chart">
+                <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
+              </div>
+            </template>
+          </Card>
         </div>
-        <div v-if="!loading" class="card-chart">
-          <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
+        <div class="col-12 md:col-3">
+          <Card class="dashboard-summary-card">
+            <template #title>
+              <h3>Resumo geral</h3>
+            </template>
+            <template #content>
+              <DataTable :value="resumeSummaryRows" stripedRows class="resume-table" tableStyle="min-width: 100%">
+                <Column field="label" header="Item" />
+                <Column field="value" header="Valor" />
+              </DataTable>
+            </template>
+          </Card>
         </div>
       </div>
     </template>
@@ -338,6 +369,10 @@ loadBankAccounts();
 
 .chart {
   width: 100%;
+  height: 100%;
+}
+
+.dashboard-grid :deep(.p-card) {
   height: 100%;
 }
 </style>
