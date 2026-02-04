@@ -26,6 +26,8 @@ const isEditMode = ref(false);
 const forms = ref<PaymentsForms[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
 const accountSelected = ref<Bills>();
+const accountToEdit = ref<Bills | null>(null);
+const accountToPay = ref<Bills | null>(null);
 
 const formAccount = ref<{
   tipo: "D" | "R",
@@ -151,7 +153,6 @@ const ChipsFilter = ref<{
 }]);
 
 function loadBills() {
-  console.log('Loading bills with filter:', filter.value);
   api.findBills({
     filter: {
       ...filter.value.filter,
@@ -264,8 +265,8 @@ const createBill = () => {
   });
 }
 
-const updateBill = () => {
-  if (formPayment.value.valorPago > (accountSelected.value?.valor || 0)) {
+const paymentBill = (bill: Bills) => {
+  if (formPayment.value.valorPago > (bill.valor || 0)) {
     toast.add({
       severity: 'error',
       summary: 'Erro',
@@ -275,23 +276,52 @@ const updateBill = () => {
     return;
   }
 
-  const bill = { ...accountSelected.value }
+  bill.status = 'PA';
+  bill.id_forma_pagamento = formPayment.value.formaPagamento.id;
+  bill.id_conta_bancaria = formPayment.value.bankAccount.id;
+  bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
+  bill.valor_pago = formPayment.value.valorPago;
 
-  if (isEditMode.value) {
-    bill.titulo = formAccount.value.titulo,
-      bill.tipo = formAccount.value.tipo,
-      bill.valor = formAccount.value.valor,
-      bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
-      bill.descricao = formAccount.value.descricao || ''
-  } else {
-    bill.status = 'PA',
-      bill.id_forma_pagamento = formPayment.value.formaPagamento.id,
-      bill.id_conta_bancaria = formPayment.value.bankAccount.id,
-      bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD'),
-      bill.valor_pago = formPayment.value.valorPago
+  api.updateBills(bill.id || 0, bill).then(() => {
+    showDialogPayment.value = false;
+    showDialogForm.value = false;
+    loadBills();
+    loadResumes();
+  });
+}
+
+const updateBill = (payment?: boolean) => {
+  const currentAccount = isEditMode.value ? accountToEdit.value : accountToPay.value;
+
+  if (!currentAccount) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: 'Nenhuma conta selecionada',
+      life: 3000
+    });
+    return;
   }
 
-  api.updateBills(accountSelected.value?.id || 0, bill).then(() => {
+  if (formPayment.value.valorPago > (currentAccount.valor || 0)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: 'Valor pago não pode ser maior que o valor da conta',
+      life: 3000
+    });
+    return;
+  }
+
+  const bill = { ...currentAccount }
+
+  bill.titulo = formAccount.value.titulo;
+  bill.tipo = formAccount.value.tipo;
+  bill.valor = formAccount.value.valor;
+  bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD');
+  bill.descricao = formAccount.value.descricao || '';
+
+  api.updateBills(currentAccount.id || 0, bill).then(() => {
     showDialogPayment.value = false;
     showDialogForm.value = false;
     loadBills();
@@ -431,6 +461,37 @@ const confirmDelete = (bill: Bills) => {
   });
 };
 
+function resetFormPayment() {
+  formPayment.value = {
+    formaPagamento: forms.value[0],
+    bankAccount: bankAccounts.value.find((account) => account.principal === 'S') || bankAccounts.value[0],
+    dataPagamento: moment().toDate(),
+    valorPago: 0
+  };
+  accountToPay.value = null;
+  accountSelected.value = undefined;
+}
+
+function resetFormEdit() {
+  isEditMode.value = false;
+  accountToEdit.value = null;
+  formAccount.value = {
+    tipo: "D",
+    titulo: '',
+    valor: 0,
+    status: 'PE',
+    pagoOptions: [
+      { name: 'Pago', value: 'PA' },
+      { name: 'Pendente', value: 'PE' }
+    ],
+    contaParcelada: "N",
+    contaFrequente: "N",
+    frequencia: 2,
+    total_parcelas: 2,
+    valorPago: 0,
+  };
+}
+
 watch(bills, () => {
   const data = bills.value as Bills[];
   items.value = data.map((bill) => {
@@ -442,6 +503,7 @@ watch(bills, () => {
         icon: 'pi pi-arrow-circle-down',
         key: bill.id?.toString(),
         command: () => {
+          accountToPay.value = { ...bill };
           formPayment.value.valorPago = bill.valor;
           accountSelected.value = bill;
           showDialogPayment.value = true;
@@ -455,6 +517,7 @@ watch(bills, () => {
         icon: 'pi pi-pencil',
         command: () => {
           isEditMode.value = true;
+          accountToEdit.value = { ...bill };
           accountSelected.value = bill;
           showDialogForm.value = true;
 
@@ -490,6 +553,18 @@ watch(page, () => {
 watch(filter, () => {
   loadResumes();
   loadBills();
+});
+
+watch(showDialogPayment, (newValue) => {
+  if (!newValue) {
+    resetFormPayment();
+  }
+});
+
+watch(showDialogForm, (newValue) => {
+  if (!newValue) {
+    resetFormEdit();
+  }
 });
 
 loadAllData();
@@ -615,7 +690,8 @@ loadAllData();
     <template #footer>
       <div class="flex justify-content-end mt-4 gap-2">
         <Button label="Cancelar" class="p-button-secondary" @click="showDialogPayment = false" />
-        <Button label="Pagar" class="p-button-primary" @click="updateBill" />
+        <Button v-if="accountSelected" label="Pagar" class="p-button-primary"
+          @click="() => paymentBill(accountSelected!)" />
       </div>
     </template>
   </Dialog>
