@@ -93,6 +93,13 @@ export type ResumeBills = {
   saldo: number
 }
 
+export type ResumeBillsYearly = {
+  mes: "janeiro" | "fevereiro" | "março" | "abril" | "maio" | "junho" | "julho" | "agosto" | "setembro" | "outubro" | "novembro" | "dezembro",
+  totalPagar: number,
+  totalReceber: number,
+  saldo: number
+}
+
 export type PaymentsForms = {
   id: number,
   descricao: "DINHEIRO" | "CARTÃO DE CRÉDITO" | "CARTÃO DE DÉBITO" | "PIX",

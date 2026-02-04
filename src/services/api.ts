@@ -1,11 +1,10 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
   private instance!: AxiosInstance;
 
   constructor() {
-    console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
     this.instance = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
       timeout: 10000,
@@ -89,6 +88,21 @@ export class Api {
     return new Promise<ResumeBills>(async (resolve, reject) => {
       try {
         const response = await this.instance.post('/private/resumos/geral', data);
+
+        resolve(response.data);
+      } catch (error: any) {
+        reject(error.response);
+      }
+    })
+  }
+
+  resumesYear(data: {
+    ano: number,
+    usuario: number
+  }): Promise<ResumeBillsYearly[]> {
+    return new Promise<ResumeBillsYearly[]>(async (resolve, reject) => {
+      try {
+        const response = await this.instance.post('/private/resumos/anual', data);
 
         resolve(response.data);
       } catch (error: any) {
