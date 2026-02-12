@@ -539,6 +539,12 @@ onMounted(loadCards)
 </template>
 
 <style scoped>
+.kanban-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .kanban-header {
   display: flex;
   justify-content: space-between;
@@ -554,12 +560,17 @@ onMounted(loadCards)
 
 .kanban-board {
   display: flex;
+  flex: 1;
+  align-items: stretch;
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 1rem;
 }
 
 .kanban-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   min-width: 320px;
   background: var(--p-content-background);
   border: 1px solid var(--p-content-border-color);
@@ -585,6 +596,7 @@ onMounted(loadCards)
 
 .tasks-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
 }
