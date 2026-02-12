@@ -512,12 +512,12 @@ onMounted(loadCards)
         </FloatLabel>
 
         <div class="markdown-editor">
-          <div class="markdown-toolbar">
+          <!-- <div class="markdown-toolbar">
             <Button label="B" size="small" text @click="insertMarkdown('**', '**')" />
             <Button label="I" size="small" text @click="insertMarkdown('*', '*')" />
             <Button label="Code" size="small" text @click="insertMarkdown('`', '`')" />
             <Button label="Link" size="small" text @click="insertMarkdown('[', '](https://)')" />
-          </div>
+          </div> -->
           <div class="markdown-tabs">
             <Button
               label="Write"
