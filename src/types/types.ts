@@ -152,3 +152,25 @@ export type FilterBill = {
   type: 'TO' | 'D' | 'R',
   datePeriod: Date[]
 }
+
+export type KanbanCard = {
+  id?: number,
+  id_usuario: number,
+  titulo: string,
+  ordem: number,
+  deletado: "S" | "N",
+  dthr_registro?: string,
+  dthr_atualizacao?: string
+}
+
+export type Tarefas = {
+  id?: number,
+  id_usuario: number,
+  id_card: number,
+  titulo: string,
+  descricao: string,
+  data_vencimento: string,
+  deletado: "S" | "N",
+  dthr_registro?: string,
+  dthr_atualizacao?: string
+}

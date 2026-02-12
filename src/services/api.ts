@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -205,5 +205,59 @@ export class Api {
         reject(error.response);
       }
     })
+  }
+
+  kanbanCard = {
+    listar: async (data: any): Promise<KanbanCard> => {
+      try {
+        const response = await this.instance.put(`/private/cards/listar`, data);
+        return response.data as KanbanCard;
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    criar: async (data: KanbanCard): Promise<KanbanCard> => {
+      try {
+        const response = await this.instance.put(`/private/cards/criar`, data);
+        return response.data as KanbanCard;
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    atualizar: async (id: number, data: Partial<KanbanCard>): Promise<KanbanCard> => {
+      try {
+        const response = await this.instance.put(`/private/cards/atualizar/${id}`, data);
+        return response.data as KanbanCard;
+      } catch (error: any) {
+        throw error.response;
+      }
+    }
+  }
+
+  tarefas = {
+    listar: async (data: any): Promise<Tarefas> => {
+      try {
+        const response = await this.instance.put(`/private/tarefas/listar`, data);
+        return response.data as Tarefas;
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    criar: async (data: Tarefas): Promise<Tarefas> => {
+      try {
+        const response = await this.instance.put(`/private/tarefas/criar`, data);
+        return response.data as Tarefas;
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    atualizar: async (id: number, data: Partial<Tarefas>): Promise<Tarefas> => {
+      try {
+        const response = await this.instance.put(`/private/tarefas/atualizar/${id}`, data);
+        return response.data as Tarefas;
+      } catch (error: any) {
+        throw error.response;
+      }
+    }
   }
 }
