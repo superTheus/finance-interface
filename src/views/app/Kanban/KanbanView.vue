@@ -8,6 +8,7 @@ import { computed, onMounted, ref } from 'vue'
 import VMdEditor from '@kangc/v-md-editor'
 import VMdPreview from '@kangc/v-md-editor/lib/preview'
 import githubTheme from '@kangc/v-md-editor/lib/theme/github.js'
+import enUS from '@kangc/v-md-editor/lib/lang/en-US'
 import hljs from 'highlight.js'
 import '@kangc/v-md-editor/lib/style/base-editor.css'
 import '@kangc/v-md-editor/lib/theme/style/github.css'
@@ -16,9 +17,11 @@ import '@kangc/v-md-editor/lib/style/preview.css'
 VMdEditor.use(githubTheme, {
   Hljs: hljs,
 })
+VMdEditor.lang.use('en-US', enUS)
 VMdPreview.use(githubTheme, {
   Hljs: hljs,
 })
+VMdPreview.lang.use('en-US', enUS)
 
 type TaskForm = {
   id?: number
