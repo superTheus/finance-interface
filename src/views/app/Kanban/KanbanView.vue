@@ -5,6 +5,20 @@ import type { KanbanCard, KanbanCardWithTasks, Tarefas } from '@/types/types'
 import { useConfirm, useToast } from 'primevue'
 import moment from 'moment'
 import { computed, onMounted, ref } from 'vue'
+import VMdEditor from '@kangc/v-md-editor'
+import VMdPreview from '@kangc/v-md-editor/lib/preview'
+import githubTheme from '@kangc/v-md-editor/lib/theme/github.js'
+import hljs from 'highlight.js'
+import '@kangc/v-md-editor/lib/style/base-editor.css'
+import '@kangc/v-md-editor/lib/theme/style/github.css'
+import '@kangc/v-md-editor/lib/style/preview.css'
+
+VMdEditor.use(githubTheme, {
+  Hljs: hljs,
+})
+VMdPreview.use(githubTheme, {
+  Hljs: hljs,
+})
 
 type TaskForm = {
   id?: number
@@ -15,6 +29,10 @@ type TaskForm = {
 }
 
 type ViewMode = 'kanban' | 'lista'
+
+type ListTask = Tarefas & {
+  cardTitulo: string
+}
 
 const api = new Api()
 const user = useUserStore()
@@ -41,12 +59,10 @@ const viewModeOptions = ref([
   { label: 'Listagem', value: 'lista' },
 ])
 
-const markdownTab = ref<'write' | 'preview'>('write')
-
 const isEditingCard = computed(() => !!cardForm.value.id)
 const isEditingTask = computed(() => !!taskForm.value.id)
 
-const listTasks = computed(() =>
+const listTasks = computed<ListTask[]>(() =>
   cards.value.flatMap((card) =>
     (card.tarefas || []).map((task) => ({
       ...task,
@@ -55,52 +71,37 @@ const listTasks = computed(() =>
   ),
 )
 
-function escapeHtml(content: string) {
-  return content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+async function handleUploadImage(
+  _event: ClipboardEvent | DragEvent,
+  insertImage: (options: { url: string; desc?: string }) => void,
+  files: File[],
+) {
+  const file = files?.[0]
 
-function parseInlineMarkdown(line: string) {
-  return line
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-    )
-}
-
-function renderMarkdown(content: string) {
-  if (!content.trim()) {
-    return '<p class="empty-preview">Sem descrição.</p>'
+  if (!file) {
+    return
   }
 
-  const escaped = escapeHtml(content)
-  const lines = escaped.split('\n')
-
-  return lines
-    .map((line: string) => {
-      if (!line.trim()) return '<br />'
-      if (line.startsWith('### ')) return `<h3>${parseInlineMarkdown(line.slice(4))}</h3>`
-      if (line.startsWith('## ')) return `<h2>${parseInlineMarkdown(line.slice(3))}</h2>`
-      if (line.startsWith('# ')) return `<h1>${parseInlineMarkdown(line.slice(2))}</h1>`
-      if (line.startsWith('- ')) return `<li>${parseInlineMarkdown(line.slice(2))}</li>`
-      return `<p>${parseInlineMarkdown(line)}</p>`
+  if (!file.type.startsWith('image/')) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Arquivo inválido',
+      detail: 'Cole ou envie apenas imagens',
+      life: 3000,
     })
-    .join('')
-    .replace(/(<li>.*?<\/li>)+/g, (list: string) => `<ul>${list}</ul>`)
-}
+    return
+  }
 
-const markdownPreview = computed(() => renderMarkdown(taskForm.value.descricao))
+  const fileReader = new FileReader()
 
-function insertMarkdown(before: string, after = '') {
-  const selection = 'texto'
-  taskForm.value.descricao = `${taskForm.value.descricao}${before}${selection}${after}`
+  fileReader.onload = () => {
+    insertImage({
+      url: String(fileReader.result || ''),
+      desc: file.name,
+    })
+  }
+
+  fileReader.readAsDataURL(file)
 }
 
 async function loadCards() {
@@ -225,7 +226,6 @@ function confirmDeleteCard(card: KanbanCard) {
 function openCreateTaskDialog(card: KanbanCard) {
   if (!card.id) return
 
-  markdownTab.value = 'write'
   taskForm.value = {
     id_card: card.id,
     titulo: '',
@@ -237,7 +237,6 @@ function openCreateTaskDialog(card: KanbanCard) {
 }
 
 function openEditTaskDialog(task: Tarefas) {
-  markdownTab.value = 'write'
   taskForm.value = {
     id: task.id,
     id_card: task.id_card,
@@ -416,7 +415,9 @@ onMounted(loadCards)
             @dragstart="(event) => onTaskDragStart(event, task)"
           >
             <div class="task-title">{{ task.titulo }}</div>
-            <div class="task-description markdown" v-html="renderMarkdown(task.descricao)"></div>
+            <div class="task-description markdown-preview-wrapper">
+              <VMdPreview :text="task.descricao || ''" />
+            </div>
             <div class="task-footer">
               <small>Vence: {{ moment(task.data_vencimento).format('DD/MM/YYYY') }}</small>
               <div class="actions">
@@ -449,7 +450,9 @@ onMounted(loadCards)
         <Column field="cardTitulo" header="Card" />
         <Column header="Descrição">
           <template #body="slotProps">
-            <div class="markdown" v-html="renderMarkdown(slotProps.data.descricao)"></div>
+            <div class="markdown-preview-wrapper">
+              <VMdPreview :text="slotProps.data.descricao || ''" />
+            </div>
           </template>
         </Column>
         <Column header="Vencimento">
@@ -503,7 +506,7 @@ onMounted(loadCards)
       v-model:visible="showTaskDialog"
       :header="isEditingTask ? 'Editar tarefa' : 'Nova tarefa'"
       modal
-      :style="{ width: '42rem' }"
+      :style="{ width: '58rem' }"
     >
       <div class="dialog-form">
         <FloatLabel variant="on">
@@ -511,37 +514,14 @@ onMounted(loadCards)
           <label for="task-title">Título</label>
         </FloatLabel>
 
-        <div class="markdown-editor">
-          <!-- <div class="markdown-toolbar">
-            <Button label="B" size="small" text @click="insertMarkdown('**', '**')" />
-            <Button label="I" size="small" text @click="insertMarkdown('*', '*')" />
-            <Button label="Code" size="small" text @click="insertMarkdown('`', '`')" />
-            <Button label="Link" size="small" text @click="insertMarkdown('[', '](https://)')" />
-          </div> -->
-          <div class="markdown-tabs">
-            <Button
-              label="Write"
-              size="small"
-              :severity="markdownTab === 'write' ? 'primary' : 'secondary'"
-              @click="markdownTab = 'write'"
-            />
-            <Button
-              label="Preview"
-              size="small"
-              :severity="markdownTab === 'preview' ? 'primary' : 'secondary'"
-              @click="markdownTab = 'preview'"
-            />
-          </div>
-
-          <Textarea
-            v-if="markdownTab === 'write'"
-            id="task-description"
+        <div class="editor-wrapper">
+          <VMdEditor
             v-model="taskForm.descricao"
-            rows="8"
-            fluid
-            placeholder="Descreva a tarefa usando Markdown..."
+            height="340px"
+            left-toolbar="undo redo clear | h bold italic strikethrough quote | ul ol table hr | link image code"
+            right-toolbar="preview toc sync-scroll fullscreen"
+            @upload-image="handleUploadImage"
           />
-          <div v-else class="markdown-preview markdown" v-html="markdownPreview"></div>
         </div>
 
         <div>
@@ -623,7 +603,6 @@ onMounted(loadCards)
 }
 
 .task-description {
-  font-size: 0.9rem;
   margin-bottom: 0.5rem;
 }
 
@@ -654,44 +633,17 @@ onMounted(loadCards)
   margin-bottom: 0.35rem;
 }
 
-.markdown-editor {
-  border: 1px solid var(--p-content-border-color);
+.editor-wrapper :deep(.v-md-editor) {
   border-radius: 8px;
   overflow: hidden;
 }
 
-.markdown-toolbar,
-.markdown-tabs {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--p-content-border-color);
+.markdown-preview-wrapper :deep(.v-md-editor-preview) {
+  padding: 0;
 }
 
-.markdown-preview {
-  min-height: 190px;
-  padding: 0.75rem;
-}
-
-.markdown :deep(h1),
-.markdown :deep(h2),
-.markdown :deep(h3),
-.markdown :deep(p) {
-  margin: 0 0 0.5rem;
-}
-
-.markdown :deep(code) {
-  background: var(--p-surface-200);
-  border-radius: 4px;
-  padding: 0.1rem 0.25rem;
-}
-
-.markdown :deep(ul) {
-  padding-left: 1.2rem;
-  margin: 0 0 0.5rem;
-}
-
-.empty-preview {
-  color: var(--p-text-muted-color);
+.markdown-preview-wrapper :deep(.v-md-editor-preview img) {
+  max-width: 100%;
+  height: auto;
 }
 </style>
