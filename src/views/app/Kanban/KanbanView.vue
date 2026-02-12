@@ -525,7 +525,7 @@ onMounted(loadCards)
         </div>
 
         <div>
-          <label class="input-label">Data de vencimento</label>
+          <label class="input-label">Data Previsão Conclusão</label>
           <DatePicker v-model="taskForm.data_vencimento" dateFormat="dd/mm/yy" fluid />
         </div>
 
