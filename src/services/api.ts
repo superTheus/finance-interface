@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, KanbanCardResponse, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -208,10 +208,10 @@ export class Api {
   }
 
   kanbanCard = {
-    listar: async (data: any): Promise<KanbanCard> => {
+    listar: async (data: any): Promise<KanbanCardResponse> => {
       try {
         const response = await this.instance.put(`/private/cards/listar`, data);
-        return response.data as KanbanCard;
+        return response.data as KanbanCardResponse;
       } catch (error: any) {
         throw error.response;
       }
