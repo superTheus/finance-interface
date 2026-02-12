@@ -14,6 +14,8 @@ type TaskForm = {
   data_vencimento: Date
 }
 
+type ViewMode = 'kanban' | 'lista'
+
 const api = new Api()
 const user = useUserStore()
 const confirm = useConfirm()
@@ -33,8 +35,73 @@ const taskForm = ref<TaskForm>({
   data_vencimento: new Date(),
 })
 
+const viewMode = ref<ViewMode>('kanban')
+const viewModeOptions = ref([
+  { label: 'Kanban', value: 'kanban' },
+  { label: 'Listagem', value: 'lista' },
+])
+
+const markdownTab = ref<'write' | 'preview'>('write')
+
 const isEditingCard = computed(() => !!cardForm.value.id)
 const isEditingTask = computed(() => !!taskForm.value.id)
+
+const listTasks = computed(() =>
+  cards.value.flatMap((card) =>
+    (card.tarefas || []).map((task) => ({
+      ...task,
+      cardTitulo: card.titulo,
+    })),
+  ),
+)
+
+function escapeHtml(content: string) {
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function parseInlineMarkdown(line: string) {
+  return line
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
+}
+
+function renderMarkdown(content: string) {
+  if (!content.trim()) {
+    return '<p class="empty-preview">Sem descrição.</p>'
+  }
+
+  const escaped = escapeHtml(content)
+  const lines = escaped.split('\n')
+
+  return lines
+    .map((line: string) => {
+      if (!line.trim()) return '<br />'
+      if (line.startsWith('### ')) return `<h3>${parseInlineMarkdown(line.slice(4))}</h3>`
+      if (line.startsWith('## ')) return `<h2>${parseInlineMarkdown(line.slice(3))}</h2>`
+      if (line.startsWith('# ')) return `<h1>${parseInlineMarkdown(line.slice(2))}</h1>`
+      if (line.startsWith('- ')) return `<li>${parseInlineMarkdown(line.slice(2))}</li>`
+      return `<p>${parseInlineMarkdown(line)}</p>`
+    })
+    .join('')
+    .replace(/(<li>.*?<\/li>)+/g, (list: string) => `<ul>${list}</ul>`)
+}
+
+const markdownPreview = computed(() => renderMarkdown(taskForm.value.descricao))
+
+function insertMarkdown(before: string, after = '') {
+  const selection = 'texto'
+  taskForm.value.descricao = `${taskForm.value.descricao}${before}${selection}${after}`
+}
 
 async function loadCards() {
   if (!user.user?.id) return
@@ -115,7 +182,7 @@ async function saveCard() {
 
 function confirmDeleteCard(card: KanbanCard) {
   confirm.require({
-    message: `Deseja deletar o card \"${card.titulo}\"?`,
+    message: `Deseja deletar o card "${card.titulo}"?`,
     header: 'Confirmar exclusão',
     icon: 'pi pi-exclamation-triangle',
     rejectProps: {
@@ -158,6 +225,7 @@ function confirmDeleteCard(card: KanbanCard) {
 function openCreateTaskDialog(card: KanbanCard) {
   if (!card.id) return
 
+  markdownTab.value = 'write'
   taskForm.value = {
     id_card: card.id,
     titulo: '',
@@ -169,6 +237,7 @@ function openCreateTaskDialog(card: KanbanCard) {
 }
 
 function openEditTaskDialog(task: Tarefas) {
+  markdownTab.value = 'write'
   taskForm.value = {
     id: task.id,
     id_card: task.id_card,
@@ -213,7 +282,7 @@ async function saveTask() {
 
 function confirmDeleteTask(task: Tarefas) {
   confirm.require({
-    message: `Deseja deletar a tarefa \"${task.titulo}\"?`,
+    message: `Deseja deletar a tarefa "${task.titulo}"?`,
     header: 'Confirmar exclusão',
     icon: 'pi pi-exclamation-triangle',
     rejectProps: {
@@ -288,10 +357,20 @@ onMounted(loadCards)
   <div class="kanban-page">
     <div class="kanban-header">
       <h2>Kanban</h2>
-      <Button label="Novo card" icon="pi pi-plus" @click="openCreateCardDialog" />
+      <div class="header-actions">
+        <SelectButton
+          v-model="viewMode"
+          :options="viewModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          size="small"
+        />
+        <Button label="Novo card" icon="pi pi-plus" @click="openCreateCardDialog" />
+      </div>
     </div>
 
-    <div class="kanban-board" v-if="!loading">
+    <div v-if="!loading && viewMode === 'kanban'" class="kanban-board">
       <div
         v-for="card in cards"
         :key="card.id"
@@ -337,7 +416,7 @@ onMounted(loadCards)
             @dragstart="(event) => onTaskDragStart(event, task)"
           >
             <div class="task-title">{{ task.titulo }}</div>
-            <div class="task-description">{{ task.descricao }}</div>
+            <div class="task-description markdown" v-html="renderMarkdown(task.descricao)"></div>
             <div class="task-footer">
               <small>Vence: {{ moment(task.data_vencimento).format('DD/MM/YYYY') }}</small>
               <div class="actions">
@@ -364,6 +443,43 @@ onMounted(loadCards)
       </div>
     </div>
 
+    <div v-else-if="!loading" class="list-view">
+      <DataTable :value="listTasks" stripedRows tableStyle="min-width: 60rem">
+        <Column field="titulo" header="Tarefa" />
+        <Column field="cardTitulo" header="Card" />
+        <Column header="Descrição">
+          <template #body="slotProps">
+            <div class="markdown" v-html="renderMarkdown(slotProps.data.descricao)"></div>
+          </template>
+        </Column>
+        <Column header="Vencimento">
+          <template #body="slotProps">
+            {{ moment(slotProps.data.data_vencimento).format('DD/MM/YYYY') }}
+          </template>
+        </Column>
+        <Column header="Ações" style="width: 8rem">
+          <template #body="slotProps">
+            <Button
+              icon="pi pi-pencil"
+              severity="secondary"
+              text
+              rounded
+              size="small"
+              @click="openEditTaskDialog(slotProps.data)"
+            />
+            <Button
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              @click="confirmDeleteTask(slotProps.data)"
+            />
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+
     <Dialog
       v-model:visible="showCardDialog"
       :header="isEditingCard ? 'Editar card' : 'Novo card'"
@@ -387,7 +503,7 @@ onMounted(loadCards)
       v-model:visible="showTaskDialog"
       :header="isEditingTask ? 'Editar tarefa' : 'Nova tarefa'"
       modal
-      :style="{ width: '32rem' }"
+      :style="{ width: '42rem' }"
     >
       <div class="dialog-form">
         <FloatLabel variant="on">
@@ -395,10 +511,38 @@ onMounted(loadCards)
           <label for="task-title">Título</label>
         </FloatLabel>
 
-        <FloatLabel variant="on">
-          <Textarea id="task-description" v-model="taskForm.descricao" rows="4" fluid />
-          <label for="task-description">Descrição</label>
-        </FloatLabel>
+        <div class="markdown-editor">
+          <div class="markdown-toolbar">
+            <Button label="B" size="small" text @click="insertMarkdown('**', '**')" />
+            <Button label="I" size="small" text @click="insertMarkdown('*', '*')" />
+            <Button label="Code" size="small" text @click="insertMarkdown('`', '`')" />
+            <Button label="Link" size="small" text @click="insertMarkdown('[', '](https://)')" />
+          </div>
+          <div class="markdown-tabs">
+            <Button
+              label="Write"
+              size="small"
+              :severity="markdownTab === 'write' ? 'primary' : 'secondary'"
+              @click="markdownTab = 'write'"
+            />
+            <Button
+              label="Preview"
+              size="small"
+              :severity="markdownTab === 'preview' ? 'primary' : 'secondary'"
+              @click="markdownTab = 'preview'"
+            />
+          </div>
+
+          <Textarea
+            v-if="markdownTab === 'write'"
+            id="task-description"
+            v-model="taskForm.descricao"
+            rows="8"
+            fluid
+            placeholder="Descreva a tarefa usando Markdown..."
+          />
+          <div v-else class="markdown-preview markdown" v-html="markdownPreview"></div>
+        </div>
 
         <div>
           <label class="input-label">Data de vencimento</label>
@@ -420,6 +564,12 @@ onMounted(loadCards)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .kanban-board {
@@ -474,7 +624,6 @@ onMounted(loadCards)
 
 .task-description {
   font-size: 0.9rem;
-  color: var(--p-text-muted-color);
   margin-bottom: 0.5rem;
 }
 
@@ -482,6 +631,10 @@ onMounted(loadCards)
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.list-view {
+  width: 100%;
 }
 
 .dialog-form {
@@ -499,5 +652,46 @@ onMounted(loadCards)
 .input-label {
   display: block;
   margin-bottom: 0.35rem;
+}
+
+.markdown-editor {
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.markdown-toolbar,
+.markdown-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.markdown-preview {
+  min-height: 190px;
+  padding: 0.75rem;
+}
+
+.markdown :deep(h1),
+.markdown :deep(h2),
+.markdown :deep(h3),
+.markdown :deep(p) {
+  margin: 0 0 0.5rem;
+}
+
+.markdown :deep(code) {
+  background: var(--p-surface-200);
+  border-radius: 4px;
+  padding: 0.1rem 0.25rem;
+}
+
+.markdown :deep(ul) {
+  padding-left: 1.2rem;
+  margin: 0 0 0.5rem;
+}
+
+.empty-preview {
+  color: var(--p-text-muted-color);
 }
 </style>
