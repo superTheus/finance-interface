@@ -163,6 +163,16 @@ export type KanbanCard = {
   dthr_atualizacao?: string
 }
 
+
+export type KanbanCardWithTasks = KanbanCard & {
+  tarefas?: Tarefas[]
+}
+
+export type KanbanCardResponse = {
+  total: number,
+  data: KanbanCardWithTasks[]
+}
+
 export type Tarefas = {
   id?: number,
   id_usuario: number,

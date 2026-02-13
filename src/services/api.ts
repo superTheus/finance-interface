@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, KanbanCardResponse, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -208,17 +208,17 @@ export class Api {
   }
 
   kanbanCard = {
-    listar: async (data: any): Promise<KanbanCard> => {
+    listar: async (data: any): Promise<KanbanCardResponse> => {
       try {
-        const response = await this.instance.put(`/private/cards/listar`, data);
-        return response.data as KanbanCard;
+        const response = await this.instance.post(`/private/cards/listar`, data);
+        return response.data as KanbanCardResponse;
       } catch (error: any) {
         throw error.response;
       }
     },
     criar: async (data: KanbanCard): Promise<KanbanCard> => {
       try {
-        const response = await this.instance.put(`/private/cards/criar`, data);
+        const response = await this.instance.post(`/private/cards/criar`, data);
         return response.data as KanbanCard;
       } catch (error: any) {
         throw error.response;
@@ -237,7 +237,7 @@ export class Api {
   tarefas = {
     listar: async (data: any): Promise<Tarefas> => {
       try {
-        const response = await this.instance.put(`/private/tarefas/listar`, data);
+        const response = await this.instance.post(`/private/tarefas/listar`, data);
         return response.data as Tarefas;
       } catch (error: any) {
         throw error.response;
@@ -245,7 +245,7 @@ export class Api {
     },
     criar: async (data: Tarefas): Promise<Tarefas> => {
       try {
-        const response = await this.instance.put(`/private/tarefas/criar`, data);
+        const response = await this.instance.post(`/private/tarefas/criar`, data);
         return response.data as Tarefas;
       } catch (error: any) {
         throw error.response;
