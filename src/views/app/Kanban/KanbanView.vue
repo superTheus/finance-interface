@@ -55,6 +55,20 @@ const taskForm = ref<TaskForm>({
   data_vencimento: new Date(),
 })
 
+// Visualizar tarefa (Markdown preview)
+const showViewTaskDialog = ref(false)
+const viewTask = ref<Tarefas | null>(null)
+
+function openViewTask(task: Tarefas) {
+  viewTask.value = task
+  showViewTaskDialog.value = true
+}
+
+function closeViewTask() {
+  showViewTaskDialog.value = false
+  viewTask.value = null
+}
+
 const viewMode = ref<ViewMode>('kanban')
 const viewModeOptions = ref([
   { label: 'Kanban', value: 'kanban' },
@@ -381,15 +395,15 @@ onMounted(loadCards)
 
         <div class="tasks-list">
           <div v-for="task in card.tarefas" :key="task.id" class="task-card" draggable="true"
-            @dragstart="(event) => onTaskDragStart(event, task)">
+            @dragstart="(event) => onTaskDragStart(event, task)" @click="openViewTask(task)">
             <div class="task-title">{{ task.titulo }}</div>
             <div class="task-footer">
               <small>Vence: {{ moment(task.data_vencimento).format('DD/MM/YYYY') }}</small>
               <div class="actions">
                 <Button icon="pi pi-pencil" severity="secondary" text rounded size="small"
-                  @click="openEditTaskDialog(task)" />
+                  @click.stop="openEditTaskDialog(task)" />
                 <Button icon="pi pi-trash" severity="danger" text rounded size="small"
-                  @click="confirmDeleteTask(task)" />
+                  @click.stop="confirmDeleteTask(task)" />
               </div>
             </div>
           </div>
@@ -454,6 +468,17 @@ onMounted(loadCards)
         <div class="dialog-actions">
           <Button label="Cancelar" severity="secondary" outlined @click="showTaskDialog = false" />
           <Button label="Salvar" @click="saveTask" />
+        </div>
+      </div>
+    </Dialog>
+
+    <Dialog v-model:visible="showViewTaskDialog" :header="viewTask?.titulo" modal :style="{ width: '48rem' }">
+      <div class="dialog-form" v-if="viewTask">
+        <div class="markdown-preview-wrapper">
+          <VMdPreview :text="viewTask.descricao" />
+        </div>
+        <div class="dialog-actions">
+          <Button label="Fechar" severity="secondary" outlined @click="closeViewTask" />
         </div>
       </div>
     </Dialog>
