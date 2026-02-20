@@ -359,86 +359,37 @@ onMounted(loadCards)
     <div class="kanban-header">
       <h2>Kanban</h2>
       <div class="header-actions">
-        <SelectButton
-          v-model="viewMode"
-          :options="viewModeOptions"
-          optionLabel="label"
-          optionValue="value"
-          :allowEmpty="false"
-          size="small"
-        />
+        <SelectButton v-model="viewMode" :options="viewModeOptions" optionLabel="label" optionValue="value"
+          :allowEmpty="false" size="small" />
         <Button label="Novo card" icon="pi pi-plus" @click="openCreateCardDialog" />
       </div>
     </div>
 
     <div v-if="!loading && viewMode === 'kanban'" class="kanban-board">
-      <div
-        v-for="card in cards"
-        :key="card.id"
-        class="kanban-column"
-        @dragover.prevent
-        @drop="(event) => onColumnDrop(event, card)"
-      >
+      <div v-for="card in cards" :key="card.id" class="kanban-column" @dragover.prevent
+        @drop="(event) => onColumnDrop(event, card)">
         <div class="column-header">
           <h3>{{ card.titulo }}</h3>
           <div class="actions">
-            <Button
-              icon="pi pi-pencil"
-              severity="secondary"
-              text
-              rounded
-              @click="openEditCardDialog(card)"
-            />
-            <Button
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              rounded
-              @click="confirmDeleteCard(card)"
-            />
+            <Button icon="pi pi-pencil" severity="secondary" text rounded @click="openEditCardDialog(card)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded @click="confirmDeleteCard(card)" />
           </div>
         </div>
 
-        <Button
-          class="add-task"
-          label="Nova tarefa"
-          icon="pi pi-plus"
-          size="small"
-          outlined
-          @click="openCreateTaskDialog(card)"
-        />
+        <Button class="add-task" label="Nova tarefa" icon="pi pi-plus" size="small" outlined
+          @click="openCreateTaskDialog(card)" />
 
         <div class="tasks-list">
-          <div
-            v-for="task in card.tarefas"
-            :key="task.id"
-            class="task-card"
-            draggable="true"
-            @dragstart="(event) => onTaskDragStart(event, task)"
-          >
+          <div v-for="task in card.tarefas" :key="task.id" class="task-card" draggable="true"
+            @dragstart="(event) => onTaskDragStart(event, task)">
             <div class="task-title">{{ task.titulo }}</div>
-            <div class="task-description markdown-preview-wrapper">
-              <VMdPreview :text="task.descricao || ''" />
-            </div>
             <div class="task-footer">
               <small>Vence: {{ moment(task.data_vencimento).format('DD/MM/YYYY') }}</small>
               <div class="actions">
-                <Button
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  text
-                  rounded
-                  size="small"
-                  @click="openEditTaskDialog(task)"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  size="small"
-                  @click="confirmDeleteTask(task)"
-                />
+                <Button icon="pi pi-pencil" severity="secondary" text rounded size="small"
+                  @click="openEditTaskDialog(task)" />
+                <Button icon="pi pi-trash" severity="danger" text rounded size="small"
+                  @click="confirmDeleteTask(task)" />
               </div>
             </div>
           </div>
@@ -450,13 +401,6 @@ onMounted(loadCards)
       <DataTable :value="listTasks" stripedRows tableStyle="min-width: 60rem">
         <Column field="titulo" header="Tarefa" />
         <Column field="cardTitulo" header="Card" />
-        <Column header="Descrição">
-          <template #body="slotProps">
-            <div class="markdown-preview-wrapper">
-              <VMdPreview :text="slotProps.data.descricao || ''" />
-            </div>
-          </template>
-        </Column>
         <Column header="Vencimento">
           <template #body="slotProps">
             {{ moment(slotProps.data.data_vencimento).format('DD/MM/YYYY') }}
@@ -464,33 +408,17 @@ onMounted(loadCards)
         </Column>
         <Column header="Ações" style="width: 8rem">
           <template #body="slotProps">
-            <Button
-              icon="pi pi-pencil"
-              severity="secondary"
-              text
-              rounded
-              size="small"
-              @click="openEditTaskDialog(slotProps.data)"
-            />
-            <Button
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              rounded
-              size="small"
-              @click="confirmDeleteTask(slotProps.data)"
-            />
+            <Button icon="pi pi-pencil" severity="secondary" text rounded size="small"
+              @click="openEditTaskDialog(slotProps.data)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded size="small"
+              @click="confirmDeleteTask(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
     </div>
 
-    <Dialog
-      v-model:visible="showCardDialog"
-      :header="isEditingCard ? 'Editar card' : 'Novo card'"
-      modal
-      :style="{ width: '28rem' }"
-    >
+    <Dialog v-model:visible="showCardDialog" :header="isEditingCard ? 'Editar card' : 'Novo card'" modal
+      :style="{ width: '28rem' }">
       <div class="dialog-form">
         <FloatLabel variant="on">
           <InputText id="card-title" v-model="cardForm.titulo" fluid />
@@ -504,12 +432,8 @@ onMounted(loadCards)
       </div>
     </Dialog>
 
-    <Dialog
-      v-model:visible="showTaskDialog"
-      :header="isEditingTask ? 'Editar tarefa' : 'Nova tarefa'"
-      modal
-      :style="{ width: '58rem' }"
-    >
+    <Dialog v-model:visible="showTaskDialog" :header="isEditingTask ? 'Editar tarefa' : 'Nova tarefa'" modal
+      :style="{ width: '58rem' }">
       <div class="dialog-form">
         <FloatLabel variant="on">
           <InputText id="task-title" v-model="taskForm.titulo" fluid />
@@ -517,13 +441,9 @@ onMounted(loadCards)
         </FloatLabel>
 
         <div class="editor-wrapper">
-          <VMdEditor
-            v-model="taskForm.descricao"
-            height="340px"
+          <VMdEditor v-model="taskForm.descricao" height="340px"
             left-toolbar="undo redo clear | h bold italic strikethrough quote | ul ol table hr | link image code"
-            right-toolbar="preview toc sync-scroll fullscreen"
-            @upload-image="handleUploadImage"
-          />
+            right-toolbar="preview toc sync-scroll fullscreen" @upload-image="handleUploadImage" />
         </div>
 
         <div>
@@ -601,6 +521,8 @@ onMounted(loadCards)
   flex: 1;
   flex-direction: column;
   gap: 0.75rem;
+  overflow: hidden;
+  overflow-y: auto;
 }
 
 .task-card {
