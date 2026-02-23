@@ -184,3 +184,14 @@ export type Tarefas = {
   dthr_registro?: string,
   dthr_atualizacao?: string
 }
+
+export type Notas = {
+  id?: number,
+  id_usuario: number,
+  titulo: string,
+  texto: string,
+  arquivado: "S" | "N",
+  deletado: "S" | "N",
+  dthr_registro?: string,
+  dthr_atualizacao?: string
+}

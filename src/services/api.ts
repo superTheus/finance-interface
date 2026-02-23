@@ -1,4 +1,4 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, KanbanCardResponse, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
+import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, KanbanCard, KanbanCardResponse, Notas, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, Tarefas, User } from '@/types/types';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -235,10 +235,10 @@ export class Api {
   }
 
   tarefas = {
-    listar: async (data: any): Promise<Tarefas> => {
+    listar: async (data: any): Promise<Tarefas[]> => {
       try {
         const response = await this.instance.post(`/private/tarefas/listar`, data);
-        return response.data as Tarefas;
+        return response.data as Tarefas[];
       } catch (error: any) {
         throw error.response;
       }
@@ -255,6 +255,33 @@ export class Api {
       try {
         const response = await this.instance.put(`/private/tarefas/atualizar/${id}`, data);
         return response.data as Tarefas;
+      } catch (error: any) {
+        throw error.response;
+      }
+    }
+  }
+
+  notas = {
+    listar: async (data: any): Promise<Notas[]> => {
+      try {
+        const response = await this.instance.post(`/private/notas/listar`, data);
+        return response.data as Notas[];
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    criar: async (data: Notas): Promise<Notas> => {
+      try {
+        const response = await this.instance.post(`/private/notas/criar`, data);
+        return response.data as Notas;
+      } catch (error: any) {
+        throw error.response;
+      }
+    },
+    atualizar: async (id: number, data: Partial<Notas>): Promise<Notas> => {
+      try {
+        const response = await this.instance.put(`/private/notas/atualizar/${id}`, data);
+        return response.data as Notas;
       } catch (error: any) {
         throw error.response;
       }
