@@ -118,6 +118,48 @@ const resumeSummaryRows = computed(() => ([
   { label: 'Saldo Previsão', value: utils.formatCurrency(resumeBills.value.saldo) }
 ]));
 
+
+const balanceChartData = computed(() => ({
+  labels: monthLabels.value,
+  datasets: [
+    {
+      label: 'Saldo mensal',
+      data: monthLabels.value.map((label) => yearlyResumeMap.value.get(normalizeMonthKey(label))?.saldo ?? 0),
+      borderColor: '#0f766e',
+      backgroundColor: 'rgba(15, 118, 110, 0.15)',
+      fill: true,
+      tension: 0.35
+    }
+  ]
+}));
+
+const monthlyProjectionData = computed(() => ({
+  labels: ['Pago/recebido', 'Pendente'],
+  datasets: [
+    {
+      data: [
+        resumeBills.value.totalPago + resumeBills.value.totalRecebido,
+        resumeBills.value.totalFaltaPagar + resumeBills.value.totalFaltaReceber
+      ],
+      backgroundColor: ['#22c55e', '#f59e0b'],
+      borderWidth: 0
+    }
+  ]
+}));
+
+const compactChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'bottom' },
+    tooltip: {
+      callbacks: {
+        label: (context: { label?: string, raw: number }) => `${context.label || 'Valor'}: ${utils.formatCurrency(Number(context.raw || 0))}`
+      }
+    }
+  }
+}));
+
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -299,80 +341,82 @@ loadBankAccounts();
 </script>
 
 <template>
-  <Card>
+  <Card class="dashboard-page">
     <template #title>
-      <h3>Dashboards</h3>
-    </template>
-    <template #content>
-      <div class="flex justify-content-between align-items-center">
-        <h3> Resumos </h3>
+      <div class="dashboard-hero">
+        <div>
+          <p class="eyebrow">Visão financeira</p>
+          <h2>Dashboard</h2>
+          <span>Receitas, despesas, saldo previsto e situação do mês em tempo real.</span>
+        </div>
         <Select v-model="currentMounth" :options="monthsSelected.slice(1)" optionLabel="name" option-value="code"
-          placeholder="Selecione um mês" />
+          placeholder="Selecione um mês" class="month-select" />
       </div>
+    </template>
 
+    <template #content>
       <div class="card-resume-container my-3">
-        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-file"
-          class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-file"
-          class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.saldo" label="Previsão de Saldo" icon="pi pi-file" class="card-resume"
+        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
+          class="card-resume card-resume_danger" :hint="`${formatQuantity(resumeBills.quantidadeTotalPagar)} lançamentos`" />
+        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
+          class="card-resume card-resume_green" :hint="`${formatQuantity(resumeBills.quantidadeTotalReceber)} lançamentos`" />
+        <ValuesTotals :value="resumeBills.saldo" label="Previsão de saldo" icon="pi pi-chart-line" class="card-resume"
           :class="resumeBills.saldo <= 0 ? 'card-resume_danger' : 'card-resume_green'" />
-        <ValuesTotals :value="bankAccountsSelected?.saldo" :label="'Saldo - ' + bankAccountsSelected?.descricao"
-          icon="pi pi-file" class="card-resume"
+        <ValuesTotals :value="bankAccountsSelected?.saldo" :label="'Saldo - ' + (bankAccountsSelected?.descricao || 'conta principal')"
+          icon="pi pi-building-columns" class="card-resume"
           :class="(bankAccountsSelected?.saldo || 0) > 0 ? 'card-resume_green' : 'card-resume_danger'" />
       </div>
 
-      <div class="dashboard-grid grid mt-4">
-        <div class="col-12 md:col-9">
-          <Card class="dashboard-chart-card">
-            <template #title>
-              <h3>Contas - Ano</h3>
-            </template>
-            <template #content>
-              <div v-if="!loading" class="card-chart">
-                <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
-              </div>
-            </template>
-          </Card>
-        </div>
-        <div class="col-12 md:col-3">
-          <Card class="dashboard-summary-card">
-            <template #title>
-              <h3>Resumo geral</h3>
-            </template>
-            <template #content>
-              <DataTable :value="resumeSummaryRows" stripedRows class="resume-table" tableStyle="min-width: 100%">
-                <Column field="label" header="Item" />
-                <Column field="value" header="Valor" />
-              </DataTable>
-            </template>
-          </Card>
-        </div>
+      <div class="dashboard-grid">
+        <Card class="span-8">
+          <template #title><h3>Receita x Despesa por mês</h3></template>
+          <template #content>
+            <div v-if="!loading" class="card-chart">
+              <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
+            </div>
+            <div v-else class="empty-state">Carregando gráfico...</div>
+          </template>
+        </Card>
+        <Card class="span-4">
+          <template #title><h3>Resumo geral</h3></template>
+          <template #content>
+            <DataTable :value="resumeSummaryRows" stripedRows class="resume-table" tableStyle="min-width: 100%">
+              <Column field="label" header="Item" />
+              <Column field="value" header="Valor" />
+            </DataTable>
+          </template>
+        </Card>
+        <Card class="span-7">
+          <template #title><h3>Fluxo de caixa / saldo mensal</h3></template>
+          <template #content>
+            <div class="mini-chart"><Chart type="line" :data="balanceChartData" :options="chartOptions" /></div>
+          </template>
+        </Card>
+        <Card class="span-5">
+          <template #title><h3>Pago x pendente no período</h3></template>
+          <template #content>
+            <div class="mini-chart"><Chart type="doughnut" :data="monthlyProjectionData" :options="compactChartOptions" /></div>
+          </template>
+        </Card>
       </div>
     </template>
   </Card>
 </template>
 
 <style lang="scss" scoped>
-.card-resume-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  overflow-x: auto;
-}
-
-.card-chart {
-  width: 100%;
-  height: 50vh;
-  position: relative;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
-
-.dashboard-grid :deep(.p-card) {
-  height: 100%;
-}
+.dashboard-page :deep(.p-card-content) { padding-top: 0; }
+.dashboard-hero { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
+.dashboard-hero h2 { margin:0; font-size:clamp(1.8rem,3vw,2.5rem); font-weight:800; }
+.dashboard-hero span, .eyebrow { color: var(--app-muted-color); }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:800; margin-bottom:.25rem; }
+.month-select { min-width: 14rem; }
+.card-resume-container { display:grid; grid-template-columns:repeat(4,minmax(13rem,1fr)); gap:1rem; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:1rem; margin-top:1rem; }
+.span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
+.card-chart { width:100%; height: min(52vh, 34rem); position:relative; }
+.mini-chart { height: 20rem; }
+.chart { width:100%; height:100%; }
+.dashboard-grid :deep(.p-card) { height:100%; }
+@media (max-width: 1024px) { .span-8,.span-4,.span-7,.span-5 { grid-column: 1 / -1; } .card-resume-container { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 640px) { .card-resume-container { grid-template-columns:1fr; } .month-select { width:100%; } .card-chart,.mini-chart { height: 18rem; } }
 </style>

@@ -76,7 +76,7 @@ const setNew = () => {
     saldo: 0,
     principal: false
   };
-  isEdit.value = true;
+  isEdit.value = false;
   isDialogVisible.value = true;
   accountSelected.value = null;
 };
@@ -95,16 +95,14 @@ const update = () => {
 };
 
 const create = () => {
-  if (accountSelected.value) {
-    api.createBankAccount({
-      descricao: form.value.descricao || '',
-      saldo: form.value.saldo || 0,
-      principal: form.value.principal ? 'S' : 'N'
-    }).then(() => {
-      loadBankAccounts();
-      isDialogVisible.value = false;
-    });
-  }
+  api.createBankAccount({
+    descricao: form.value.descricao || '',
+    saldo: form.value.saldo || 0,
+    principal: form.value.principal ? 'S' : 'N'
+  }).then(() => {
+    loadBankAccounts();
+    isDialogVisible.value = false;
+  });
 };
 
 loadBankAccounts();
@@ -112,43 +110,48 @@ loadBankAccounts();
 </script>
 
 <template>
-  <Card>
+  <Card class="bank-page">
     <template #title>
-      <div class="flex justify-content-between">
-        <h3>Contas Bancárias</h3>
+      <div class="bank-header">
+        <div>
+          <p class="eyebrow">Contas do caixa</p>
+          <h3>Contas Bancárias</h3>
+        </div>
         <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" @click="setNew" />
       </div>
     </template>
 
     <template #content>
-      <DataTable :value="bankAccounts" class="mt-3" stripedRows tableStyle="min-width: 50rem">
-        <Column field="descricao" header="Descrição">
-          <template #body="slotProps">
-            {{ slotProps.data.descricao }}
-            <Badge v-if="slotProps.data.principal === 'S'" value="Conta Principal" severity="info">
-            </Badge>
-          </template>
-        </Column>
-        <Column field="valor" header="Valor" class="col-3">
-          <template #body="slotProps">
-            <span>{{ utils.formatCurrency(slotProps.data.saldo) }}</span>
-          </template>
-        </Column>
-        <Column field="opcoes" header="Opções" class="col-2">
-          <template #body="slotProps">
-            <div class="flex justify-content-center gap-2">
-              <SplitButton label="Opções" size="small" outlined severity="secondary"
-                :model="items?.find(item => item.data.id === slotProps.data.id)?.items || []" />
-            </div>
-          </template>
-        </Column>
-      </DataTable>
+      <div class="responsive-table">
+        <DataTable :value="bankAccounts" class="mt-3" stripedRows tableStyle="min-width: 50rem">
+          <Column field="descricao" header="Descrição">
+            <template #body="slotProps">
+              {{ slotProps.data.descricao }}
+              <Badge v-if="slotProps.data.principal === 'S'" value="Conta Principal" severity="info" />
+            </template>
+          </Column>
+          <Column field="valor" header="Valor" class="col-3">
+            <template #body="slotProps">
+              <span>{{ utils.formatCurrency(slotProps.data.saldo) }}</span>
+            </template>
+          </Column>
+          <Column field="opcoes" header="Opções" class="col-2">
+            <template #body="slotProps">
+              <div class="flex justify-content-center gap-2">
+                <SplitButton label="Opções" size="small" outlined severity="secondary"
+                  :model="items?.find(item => item.data.id === slotProps.data.id)?.items || []" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+      <div v-if="!bankAccounts.length" class="empty-state">Nenhuma conta bancária cadastrada.</div>
     </template>
   </Card>
 
   <Dialog :header="isEdit ? 'Editar Conta Bancária' : 'Nova Conta Bancária'" :visible="isDialogVisible" modal
-    :closable="false" class="w-full md:w-6 lg:w-4 xl:w-3">
-    <div class="p-fluid">
+    :closable="false" class="bank-dialog">
+    <div class="p-fluid form-section">
       <div class="p-field flex flex-column gap-1">
         <label for="descricao">Descrição</label>
         <InputText id="descricao" v-model="form.descricao" />
@@ -161,14 +164,31 @@ loadBankAccounts();
 
       <div class="flex items-center gap-2 mt-3">
         <Checkbox v-model="form.principal" inputId="main" name="main" binary />
-        <label for="main"> Conta Principal ? </label>
+        <label for="main">Conta Principal?</label>
       </div>
-
     </div>
-    <div class="flex justify-content-end mt-4 gap-2">
-      <Button label="Cancelar" severity="danger" class="p-button-text" @click="isDialogVisible = false" />
+    <div class="dialog-footer-actions mt-4">
+      <Button label="Cancelar" severity="secondary" outlined @click="isDialogVisible = false" />
       <Button label="Salvar" class="p-button-primary" @click="isEdit ? update() : create()" />
     </div>
-
   </Dialog>
 </template>
+
+<style scoped lang="scss">
+.bank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bank-header h3 {
+  font-weight: 800;
+  margin: 0;
+}
+
+.bank-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+}
+</style>
