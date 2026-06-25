@@ -31,20 +31,21 @@ const utils = new Utils();
 
 <style scoped lang="scss">
 .metric-card {
-  min-width: 13rem !important;
+  min-width: 0 !important;
   border: 1px solid color-mix(in srgb, var(--p-content-border-color), transparent 35%);
   box-shadow: var(--app-card-shadow);
+  overflow: hidden;
 }
 
 .metric-content {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .metric-icon {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -57,17 +58,23 @@ const utils = new Utils();
 .metric-label {
   margin-bottom: 0.15rem;
   opacity: 0.82;
-  font-size: 0.86rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1.2rem, 2vw, 1.55rem);
-  font-weight: 800;
+  font-size: clamp(1rem, 1.35vw, 1.28rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
 }
 
 small {
-  opacity: 0.72;
+  display: block;
+  margin-top: 0.1rem;
+  opacity: 0.7;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 </style>

@@ -170,9 +170,10 @@
 }
 /* Financial application visual system */
 :root {
-  --app-radius: 18px;
-  --app-card-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  --app-radius: 14px;
+  --app-card-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
   --app-muted-color: var(--p-surface-500);
+  --app-title-color: #243b5a;
 }
 
 .p-card {
@@ -181,12 +182,31 @@
   box-shadow: var(--app-card-shadow) !important;
 }
 
+.p-card .p-card-body {
+  padding: 1rem 1.15rem !important;
+}
+
+.p-card .p-card-content {
+  padding: 0.65rem 0 0 !important;
+}
+
+.p-card .p-card-title {
+  margin-bottom: 0 !important;
+}
+
 .p-card-title h2,
 .p-card-title h3,
 .page-title {
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  color: var(--app-title-color);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
+
+.p-card-title h3 {
+  font-size: clamp(1rem, 1.25vw, 1.22rem);
+}
+
 
 .p-datatable {
   border-radius: 14px;

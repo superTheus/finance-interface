@@ -151,7 +151,7 @@ const compactChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'bottom' },
+    legend: { position: 'bottom', labels: { boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } } },
     tooltip: {
       callbacks: {
         label: (context: { label?: string, raw: number }) => `${context.label || 'Valor'}: ${utils.formatCurrency(Number(context.raw || 0))}`
@@ -165,7 +165,8 @@ const chartOptions = computed(() => ({
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'bottom'
+      position: 'bottom',
+      labels: { boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } }
     },
     tooltip: {
       callbacks: {
@@ -404,19 +405,22 @@ loadBankAccounts();
 </template>
 
 <style lang="scss" scoped>
-.dashboard-page :deep(.p-card-content) { padding-top: 0; }
+.dashboard-page :deep(.p-card-body) { padding: 1.15rem 1.25rem !important; }
+.dashboard-page :deep(.p-card-content) { padding-top: 0.65rem !important; }
 .dashboard-hero { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
-.dashboard-hero h2 { margin:0; font-size:clamp(1.8rem,3vw,2.5rem); font-weight:800; }
+.dashboard-hero h2 { margin:0; font-size:clamp(1.35rem,2vw,1.75rem); font-weight:750; color: var(--app-title-color); letter-spacing:-.035em; }
+.dashboard-hero span { display:block; max-width: 34rem; margin-top:.2rem; font-size:.88rem; line-height:1.35; }
 .dashboard-hero span, .eyebrow { color: var(--app-muted-color); }
-.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:800; margin-bottom:.25rem; }
-.month-select { min-width: 14rem; }
-.card-resume-container { display:grid; grid-template-columns:repeat(4,minmax(13rem,1fr)); gap:1rem; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:1rem; margin-top:1rem; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.68rem; font-weight:750; margin-bottom:.2rem; }
+.month-select { min-width: 13rem; }
+.card-resume-container { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin: .85rem 0 !important; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:.85rem; margin-top:.85rem; }
 .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
-.card-chart { width:100%; height: min(52vh, 34rem); position:relative; }
-.mini-chart { height: 20rem; }
+.card-chart { width:100%; height: clamp(18rem, 42vh, 27rem); position:relative; }
+.mini-chart { height: clamp(13rem, 28vh, 17rem); }
 .chart { width:100%; height:100%; }
-.dashboard-grid :deep(.p-card) { height:100%; }
+.dashboard-grid :deep(.p-card) { height:100%; background: rgba(255,255,255,.9); }
+.dashboard-grid :deep(.p-card-body) { height:100%; }
 @media (max-width: 1024px) { .span-8,.span-4,.span-7,.span-5 { grid-column: 1 / -1; } .card-resume-container { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width: 640px) { .card-resume-container { grid-template-columns:1fr; } .month-select { width:100%; } .card-chart,.mini-chart { height: 18rem; } }
 </style>
