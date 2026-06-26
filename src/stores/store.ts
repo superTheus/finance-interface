@@ -9,7 +9,7 @@ export function getConfig(): Config {
   if (config) {
     return JSON.parse(config);
   }
-  return { darkMode: false };
+  return { darkMode: true };
 }
 
 export function clearSession() {

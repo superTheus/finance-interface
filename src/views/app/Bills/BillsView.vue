@@ -28,6 +28,7 @@ const bankAccounts = ref<BankAccounts[]>([]);
 const accountSelected = ref<Bills>();
 const accountToEdit = ref<Bills | null>(null);
 const accountToPay = ref<Bills | null>(null);
+const saving = ref(false);
 
 const formAccount = ref<{
   tipo: "D" | "R",
@@ -223,6 +224,7 @@ function loadAllData() {
 }
 
 const createBill = () => {
+  saving.value = true;
   const bill: Bills = {
     id_usuario: user.user?.id || 0,
     titulo: formAccount.value.titulo,
@@ -245,10 +247,10 @@ const createBill = () => {
   }
 
   if (formAccount.value.status === "PA") {
-    bill.id_forma_pagamento = formPayment.value.formaPagamento.id;
-    bill.id_conta_bancaria = formPayment.value.bankAccount.id;
-    bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
-    bill.valor_pago = formPayment.value.valorPago;
+    bill.id_forma_pagamento = (formAccount.value.formaPagamento || formPayment.value.formaPagamento)?.id;
+    bill.id_conta_bancaria = (formAccount.value.bankAccount || formPayment.value.bankAccount)?.id;
+    bill.data_pagamento = moment(formAccount.value.dataPagamento || formPayment.value.dataPagamento).format('YYYY-MM-DD');
+    bill.valor_pago = formAccount.value.valorPago || formPayment.value.valorPago || formAccount.value.valor;
   }
 
   api.createBills(bill).then(() => {
@@ -262,10 +264,13 @@ const createBill = () => {
       detail: error.response.data.message,
       life: 3000
     });
+  }).finally(() => {
+    saving.value = false;
   });
 }
 
 const paymentBill = (bill: Bills) => {
+  saving.value = true;
   if (formPayment.value.valorPago > (bill.valor || 0)) {
     toast.add({
       severity: 'error',
@@ -273,6 +278,7 @@ const paymentBill = (bill: Bills) => {
       detail: 'Valor pago não pode ser maior que o valor da conta',
       life: 3000
     });
+    saving.value = false;
     return;
   }
 
@@ -287,10 +293,11 @@ const paymentBill = (bill: Bills) => {
     showDialogForm.value = false;
     loadBills();
     loadResumes();
-  });
+  }).finally(() => { saving.value = false; });
 }
 
-const updateBill = (payment?: boolean) => {
+const updateBill = () => {
+  saving.value = true;
   const currentAccount = isEditMode.value ? accountToEdit.value : accountToPay.value;
 
   if (!currentAccount) {
@@ -300,6 +307,7 @@ const updateBill = (payment?: boolean) => {
       detail: 'Nenhuma conta selecionada',
       life: 3000
     });
+    saving.value = false;
     return;
   }
 
@@ -310,6 +318,7 @@ const updateBill = (payment?: boolean) => {
       detail: 'Valor pago não pode ser maior que o valor da conta',
       life: 3000
     });
+    saving.value = false;
     return;
   }
 
@@ -326,7 +335,7 @@ const updateBill = (payment?: boolean) => {
     showDialogForm.value = false;
     loadBills();
     loadResumes();
-  });
+  }).finally(() => { saving.value = false; });
 }
 
 const deleteBill = ({ success, error }: { success?: Function, error?: Function }) => {
@@ -369,7 +378,7 @@ const applyFilter = (filterSelected: FilterBill) => {
   };
 
   if (filterSelected.statusFilter !== 'TO') {
-    addChip(filterSelected.statusFilter === 'PA' ? 'PagoS' : 'PendenteS', filterSelected, 'statusFilter', 'TO');
+    addChip(filterSelected.statusFilter === 'PA' ? 'Pagos' : 'Pendentes', filterSelected, 'statusFilter', 'TO');
     currentFilters.filter = {
       ...currentFilters.filter,
       status: filterSelected.statusFilter
@@ -572,35 +581,36 @@ loadAllData();
 </script>
 
 <template>
-  <Card>
-    <template #title>
-      <p>Contas</p>
-
-      <div class="flex justify-content-between mt-2">
+  <section class="bills-page app-page">
+      <div class="list-header">
+        <div>
+          <p class="eyebrow">Gestão financeira</p>
+          <h2>Contas</h2>
+          <span>Cadastre, acompanhe e liquide receitas e despesas.</span>
+        </div>
+      <div class="page-actions">
         <Button label="Filtrar" icon="pi pi-filter" class="p-button-secondary" @click="showFilter = true" />
-        <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
+        <Button label="Nova conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
       </div>
-    </template>
-
-    <template #content>
-      <div class="mt-3 flex gap-2">
+      </div>
+      <div class="filter-chips">
         <div v-for="item in ChipsFilter" :key="item.label">
           <Chip :label="item.label" removable>
-            <template #removeicon="{ removeCallback, keydownCallback }">
+            <template #removeicon="{ keydownCallback }">
               <i class="pi pi-minus-circle" @click="item.remove" @keydown="keydownCallback" />
             </template>
           </Chip>
         </div>
       </div>
 
-      <div class="card-resume-container mt-3">
-        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-file"
+      <div class="card-resume-container">
+        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
           class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Total falta pagar" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Falta pagar" icon="pi pi-clock"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Total falta receber" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Falta receber" icon="pi pi-hourglass"
           class="card-resume card-resume_green" />
       </div>
 
@@ -608,8 +618,9 @@ loadAllData();
         <h3> {{ total }} Contas encontradas </h3>
       </div>
 
-      <DataTable :value="bills" class="mt-3" stripedRows tableStyle="min-width: 50rem">
-        <Column field="titulo" header="Titulo">
+      <div class="responsive-table">
+        <DataTable :value="bills" stripedRows tableStyle="min-width: 50rem" sortMode="multiple">
+        <Column field="titulo" header="Título">
           <template #body="slotProps">
             {{ slotProps.data.titulo }}
             <Badge :value="slotProps.data.tipo === 'R' ? 'Receita' : 'Despesa'"
@@ -643,15 +654,16 @@ loadAllData();
           </template>
         </Column>
       </DataTable>
+      </div>
+      <div v-if="!bills.length" class="empty-state">Nenhuma conta encontrada para os filtros selecionados.</div>
 
       <Paginator v-model:first="page" :rows="filter.limit" :totalRecords="total"></Paginator>
-    </template>
-  </Card>
+  </section>
 
   <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter">
   </ModalFilters>
 
-  <Dialog v-model:visible="showDialogPayment" modal header="Pagar Conta" :style="{ width: 'auto', minWidth: '30rem' }">
+  <Dialog v-model:visible="showDialogPayment" modal header="Pagar Conta" class="finance-dialog payment-dialog">
 
     <template #header>
       <h2> Pagar Conta </h2>
@@ -688,27 +700,27 @@ loadAllData();
     </div>
 
     <template #footer>
-      <div class="flex justify-content-end mt-4 gap-2">
+      <div class="dialog-footer-actions mt-4">
         <Button label="Cancelar" class="p-button-secondary" @click="showDialogPayment = false" />
-        <Button v-if="accountSelected" label="Pagar" class="p-button-primary"
+        <Button v-if="accountSelected" label="Pagar" class="p-button-primary" :loading="saving" :disabled="saving || !formPayment.formaPagamento?.id || !formPayment.bankAccount?.id"
           @click="() => paymentBill(accountSelected!)" />
       </div>
     </template>
   </Dialog>
 
   <Dialog v-model:visible="showDialogForm" modal :header="isEditMode ? 'Editar conta' : 'Adicionar conta'"
-    :style="{ width: 'auto', minWidth: '60rem' }">
+    class="finance-dialog bill-dialog">
     <form @submit.prevent="isEditMode ? updateBill() : createBill()">
       <Stepper v-if="!isEditMode" value="1" class="w-full" linear>
         <StepList>
-          <Step value="1">Dados Inicias</Step>
+          <Step value="1">Dados iniciais</Step>
           <Step value="2">Parcelas</Step>
           <Step v-if="formAccount.contaParcelada === 'N' && formAccount.contaFrequente === 'N'" value="3">Pagamento
           </Step>
         </StepList>
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
-            <div class="flex flex-col h-48 w-50 m-auto gap-2">
+            <div class="form-section form-grid">
               <FloatLabel class="mt-4 w-full">
                 <Select v-model="formAccount.tipo" :options="[
                   { name: 'Despesa', value: 'D' },
@@ -719,7 +731,7 @@ loadAllData();
 
               <FloatLabel class="mt-4 w-full">
                 <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
-                <label for="titulo">Titulo</label>
+                <label for="titulo">Título</label>
               </FloatLabel>
 
               <FloatLabel class="mt-4 w-full">
@@ -735,7 +747,7 @@ loadAllData();
 
               <FloatLabel class="mt-4 w-full">
                 <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
-                <label for="descricao">Descrição (Opcional)</label>
+                <label for="descricao">Descrição (opcional)</label>
               </FloatLabel>
 
             </div>
@@ -745,7 +757,7 @@ loadAllData();
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="2">
-            <div v-if="formAccount.contaFrequente === 'N'" class="flex flex-col h-48 w-50 m-auto gap-2">
+            <div v-if="formAccount.contaFrequente === 'N'" class="form-section form-grid">
               <FloatLabel class="mt-4 w-full">
                 <Select v-model="formAccount.contaParcelada" :options="[
                   { name: 'Sim', value: 'S' },
@@ -755,14 +767,14 @@ loadAllData();
               </FloatLabel>
             </div>
 
-            <div v-if="formAccount.contaParcelada === 'S'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+            <div v-if="formAccount.contaParcelada === 'S'" class="form-section form-grid mt-4">
               <FloatLabel class="mt-4 w-full">
                 <InputNumber v-model="formAccount.total_parcelas" :min="2" fluid />
                 <label for="titulo">Total de Parcelas</label>
               </FloatLabel>
             </div>
 
-            <div v-if="formAccount.contaParcelada === 'N'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+            <div v-if="formAccount.contaParcelada === 'N'" class="form-section form-grid mt-4">
               <FloatLabel class="mt-4 w-full">
                 <Select v-model="formAccount.contaFrequente" :options="[
                   { name: 'Sim', value: 'S' },
@@ -772,7 +784,7 @@ loadAllData();
               </FloatLabel>
             </div>
 
-            <div v-if="formAccount.contaFrequente === 'S'" class="flex flex-col h-48 w-50 m-auto gap-2 mt-4">
+            <div v-if="formAccount.contaFrequente === 'S'" class="form-section form-grid mt-4">
               <FloatLabel class="mt-4 w-full">
                 <InputNumber v-model="formAccount.frequencia" :min="2" fluid />
                 <label for="titulo">Quantidade de meses</label>
@@ -784,13 +796,13 @@ loadAllData();
               <Button v-if="formAccount.contaFrequente === 'N' && formAccount.contaParcelada === 'N'" label="Continuar"
                 icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
 
-              <Button v-if="formAccount.contaFrequente === 'S' || formAccount.contaParcelada === 'S'" type="submit"
+              <Button v-if="formAccount.contaFrequente === 'S' || formAccount.contaParcelada === 'S'" type="submit" :loading="saving" :disabled="saving"
                 label="Finalizar" icon="pi pi-check" iconPos="left" />
             </div>
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="3">
-            <div class="flex flex-col h-48 w-50 m-auto gap-2">
+            <div class="form-section form-grid">
 
               <FloatLabel class="mt-4 w-full">
                 <Select v-model="formAccount.status" :options="formAccount.pagoOptions" optionLabel="name"
@@ -835,14 +847,14 @@ loadAllData();
             </div>
             <div class="flex pt-6 justify-between">
               <Button label="Voltar" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
-              <Button type="submit" label="Finalizar" icon="pi pi-check" iconPos="left" />
+              <Button type="submit" label="Finalizar" :loading="saving" :disabled="saving" icon="pi pi-check" iconPos="left" />
             </div>
           </StepPanel>
         </StepPanels>
       </Stepper>
 
       <div v-if="isEditMode">
-        <div class="flex flex-col h-48 w-50 m-auto gap-2">
+        <div class="form-section form-grid">
           <FloatLabel class="mt-4 w-full">
             <Select v-model="formAccount.tipo" :options="[
               { name: 'Despesa', value: 'D' },
@@ -853,7 +865,7 @@ loadAllData();
 
           <FloatLabel class="mt-4 w-full">
             <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
-            <label for="titulo">Titulo</label>
+            <label for="titulo">Título</label>
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full">
@@ -869,12 +881,12 @@ loadAllData();
 
           <FloatLabel class="mt-4 w-full">
             <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
-            <label for="descricao">Descrição (Opcional)</label>
+            <label for="descricao">Descrição (opcional)</label>
           </FloatLabel>
 
         </div>
         <div class="flex pt-6 justify-end w-full">
-          <Button label="Salvar" type="submit" icon="pi pi-check" iconPos="left" />
+          <Button label="Salvar" type="submit" :loading="saving" :disabled="saving" icon="pi pi-check" iconPos="left" />
         </div>
       </div>
     </form>
@@ -882,30 +894,53 @@ loadAllData();
 </template>
 
 <style scoped lang="scss">
-.card-resume-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  overflow-x: auto;
-
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-
+.bills-page {
+  align-content: start;
 }
 
-.value-pay {
+.card-resume-container {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.filter-chips {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.resume h3 {
+  color: var(--app-text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.finance-dialog :deep(.p-dialog-content) {
+  overflow-x: hidden;
+}
+
+.bill-dialog {
+  width: min(64rem, calc(100vw - 2rem));
+}
+
+.payment-dialog {
+  width: min(34rem, calc(100vw - 2rem));
+}
+
+@media (max-width: 1024px) {
+  .card-resume-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .card-resume-container {
+    grid-template-columns: 1fr;
+  }
+
+  .resume h3 {
+    font-size: 0.9rem;
+  }
 }
 </style>

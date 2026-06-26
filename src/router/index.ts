@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import AppView from '@/views/app/AppView.vue'
-import DashboardView from '@/views/app/Dashboard/DashboardView.vue';
 import { Routers } from '@/constants/routers';
 
 function isAuthenticated() {

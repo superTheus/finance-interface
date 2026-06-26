@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { config } from 'dotenv';
 import { DynamicDialog, Toast } from 'primevue';
 import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';

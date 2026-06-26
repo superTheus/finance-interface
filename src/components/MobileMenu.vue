@@ -2,123 +2,133 @@
 import { Routers } from '@/constants/routers';
 import { useConfigStore } from '@/stores/config';
 import { useUserStore } from '@/stores/user';
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import logoDark from '@/assets/images/logos/logo_dark_alternative.png';
+import logoLight from '@/assets/images/logos/logo_light_alternative.png';
 
 const router = useRouter();
+const route = useRoute();
 const { logout } = useUserStore();
 const config = useConfigStore();
+const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight));
 
-const navigateTo = (route: string) => {
-  router.push(route);
+const emits = defineEmits(['close']);
+
+const navigateTo = (path: string) => {
+  router.push(`/app/${path}`);
   emits('close');
 };
 
-const emits = defineEmits(['close']);
+const isActive = (path: string) => route.path === `/app/${path}`;
 </script>
 
 <template>
   <div class="mobile-menu">
+    <img :src="brandLogo" alt="Orbitus" class="mobile-brand" />
 
     <div class="menu-container">
-      <div v-for="(item, index) in Routers" :key="index" class="menu-item-container mb-3"
-        @click="navigateTo(item.path)">
-        <div :class="['menu-item', item.path === $route.path ? 'active' : '']">
-          <div class="icon-container">
-            <i :class="['pi', item.icon]"></i>
-          </div>
-          <span class="menu-label">{{ item.name }}</span>
-        </div>
-      </div>
+      <button
+        v-for="item in Routers"
+        :key="item.path"
+        type="button"
+        :class="['menu-item', { active: isActive(item.path) }]"
+        @click="navigateTo(item.path)"
+      >
+        <span class="icon-container">
+          <i :class="['pi', item.icon]"></i>
+        </span>
+        <span class="menu-label">{{ item.name }}</span>
+      </button>
     </div>
 
     <div class="actions">
-      <Button :icon="config.config.darkMode ? 'pi pi-moon' : 'pi pi-sun'" aria-label="Dark Mode" class="btn"
-        @click="config.changeTheme" v-tooltip.left="config.config.darkMode ? 'Tema claro' : 'Tema escuro'"
-        severity="secondary" />
-      <Button icon="pi pi-sign-out" aria-label="Dark Mode" class="btn" v-tooltip.left="'Sair'" @click="logout"
-        severity="secondary" />
+      <Button
+        :icon="config.config.darkMode ? 'pi pi-moon' : 'pi pi-sun'"
+        aria-label="Alternar tema"
+        class="btn"
+        @click="config.changeTheme"
+        severity="secondary"
+        text
+      />
+      <Button
+        icon="pi pi-sign-out"
+        aria-label="Sair"
+        class="btn"
+        @click="logout"
+        severity="secondary"
+        text
+      />
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 .mobile-menu {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  gap: 0.85rem;
+}
 
-  .menu-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-color);
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--surface-border);
-  }
+.mobile-brand {
+  width: 100%;
+  height: 4.5rem;
+  object-fit: contain;
+}
 
-  .menu-container {
-    flex: 1;
-    overflow-y: auto;
-  }
+.menu-container {
+  display: grid;
+  gap: 0.25rem;
+  flex: 1;
+  overflow-y: auto;
+}
 
-  .menu-item-container {
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-radius: 8px;
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--app-text-muted);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
 
-    &:hover {
-      background-color: var(--surface-hover);
-    }
-  }
+.menu-item.active,
+.menu-item:hover {
+  border-color: var(--app-border);
+  color: var(--app-text);
+  background: var(--app-surface-soft);
+}
 
-  .menu-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem 0;
-    border-radius: 8px;
-    transition: all 0.3s ease;
+.icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 8px;
+  color: var(--orbit-cyan);
+}
 
-    &.active {
-      background-color: var(--primary-color);
-      color: var(--primary-color-text);
+.menu-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
 
-      .menu-label {
-        font-weight: 600;
-      }
-    }
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--app-border);
+}
 
-    .icon-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 50%;
-      margin-right: 1rem;
-      background-color: var(--surface-card);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-      i {
-        font-size: 1.2rem;
-      }
-    }
-
-    .menu-label {
-      font-size: 1.1rem;
-    }
-  }
-
-  .menu-footer {
-    padding-top: 1rem;
-    border-top: 1px solid var(--surface-border);
-  }
-
-  .actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    padding: 1rem;
-    width: 100%;
-  }
+.actions .btn {
+  flex: 1;
 }
 </style>

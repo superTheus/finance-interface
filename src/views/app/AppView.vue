@@ -11,7 +11,7 @@ const route = useRoute()
   <div class="container app-grid">
     <header class="header">
       <Header :current-page="String(route.name || '')" />
-    </Header>
+    </header>
 
     <aside class="sidebar">
       <SidebarMenu />
