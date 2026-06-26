@@ -110,18 +110,15 @@ loadBankAccounts();
 </script>
 
 <template>
-  <Card class="bank-page">
-    <template #title>
+  <section class="bank-page app-page">
       <div class="bank-header">
         <div>
           <p class="eyebrow">Contas do caixa</p>
           <h3>Contas Bancárias</h3>
         </div>
-        <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" @click="setNew" />
+        <Button label="Nova conta" icon="pi pi-plus" class="p-button-sm" @click="setNew" />
       </div>
-    </template>
 
-    <template #content>
       <div class="responsive-table">
         <DataTable :value="bankAccounts" class="mt-3" stripedRows tableStyle="min-width: 50rem">
           <Column field="descricao" header="Descrição">
@@ -146,8 +143,7 @@ loadBankAccounts();
         </DataTable>
       </div>
       <div v-if="!bankAccounts.length" class="empty-state">Nenhuma conta bancária cadastrada.</div>
-    </template>
-  </Card>
+  </section>
 
   <Dialog :header="isEdit ? 'Editar Conta Bancária' : 'Nova Conta Bancária'" :visible="isDialogVisible" modal
     :closable="false" class="bank-dialog">
@@ -175,20 +171,20 @@ loadBankAccounts();
 </template>
 
 <style scoped lang="scss">
-.bank-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+.bank-page {
+  align-content: start;
 }
 
-.bank-header h3 {
-  font-weight: 800;
-  margin: 0;
+.responsive-table :deep(.p-datatable) {
+  min-height: 14rem;
 }
 
 .bank-dialog {
   width: min(30rem, calc(100vw - 2rem));
+}
+
+.bank-dialog label {
+  color: var(--app-text-muted);
+  font-weight: 700;
 }
 </style>

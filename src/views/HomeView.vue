@@ -2,14 +2,12 @@
 import { ref } from 'vue';
 import { useToast } from 'primevue';
 import { useUserStore } from '@/stores/user';
-
 import { Api } from '@/services/api';
 import router from '@/router';
 import { useConfigStore } from '@/stores/config';
-
-import image1 from '@/assets/images/01.png';
-import image2 from '@/assets/images/02.svg';
-import image3 from '@/assets/images/03.svg';
+import OrbitLoader from '@/components/OrbitLoader.vue';
+import heroDark from '@/assets/brand/orbitus-hero-dark.png';
+import promoRocket from '@/assets/brand/orbitus-promo-rocket.png';
 
 const config = useConfigStore();
 const email = ref('');
@@ -31,20 +29,12 @@ const formRegister = ref({
   showConfirmPass: false,
 });
 
-const itemsCarousel = ref([
-  {
-    image: image1,
-    name: 'Tenha gráficos detalhados de suas finanças'
-  },
-  {
-    image: image2,
-    name: 'Faça a gestão de suas contas bancárias'
-  },
-  {
-    image: image3,
-    name: 'Controle suas despesas e receitas'
-  }
-])
+const highlights = [
+  { icon: 'pi pi-chart-line', label: 'Visão clara' },
+  { icon: 'pi pi-bullseye', label: 'Metas em rota' },
+  { icon: 'pi pi-shield', label: 'Dados protegidos' },
+  { icon: 'pi pi-send', label: 'Planos em ação' },
+];
 
 const changePassView = () => {
   showPass.value = !showPass.value;
@@ -78,7 +68,7 @@ const login = async () => {
 
 const create = async () => {
   try {
-    if(formRegister.value.pass !== formRegister.value.confirmPass) {
+    if (formRegister.value.pass !== formRegister.value.confirmPass) {
       toast.add({
         severity: 'error',
         summary: 'Erro',
@@ -118,130 +108,323 @@ const create = async () => {
 
 const changeTheme = () => {
   isDarkMode.value = !isDarkMode.value;
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark-mode');
-  } else {
-    document.documentElement.classList.remove('dark-mode');
-  }
+  document.documentElement.classList.toggle('dark-mode', isDarkMode.value);
 
   config.setConfig({
     ...config.config,
-    darkMode: isDarkMode.value
+    darkMode: isDarkMode.value,
   });
 };
-
 </script>
 
 <template>
-  <div class="container">
-    <div class="login-container">
-      <div class="left-container">
-        <div class="card-container">
-          <div class="flex justify-content-between items-center">
-            <h1>Bem-vindo 🫡</h1>
-            <Button :icon="isDarkMode ? 'pi pi-moon' : 'pi pi-sun'" aria-label="Dark Mode" class="btn"
-              severity="secondary" @click="changeTheme" v-tooltip="isDarkMode ? 'Tema claro' : 'Tema escuro'" />
+  <main class="container home-page">
+    <section class="brand-side">
+      <img :src="heroDark" alt="Orbitus - suas finanças, seu universo" class="hero-logo" />
+
+      <div class="brand-copy">
+        <p class="eyebrow">Centro de comando financeiro</p>
+        <h1>Organize hoje para conquistar amanhã.</h1>
+        <span>Receitas, despesas, bancos e tarefas orbitando no mesmo painel.</span>
+      </div>
+
+      <div class="promo-card">
+        <img :src="promoRocket" alt="Mascote Orbitus em um foguete" />
+      </div>
+    </section>
+
+    <section class="auth-side">
+      <div class="auth-card orbit-panel">
+        <div class="auth-top">
+          <div>
+            <p class="eyebrow">{{ isRegisterMode ? 'Nova órbita' : 'Acesso Orbitus' }}</p>
+            <h2>{{ isRegisterMode ? 'Criar conta' : 'Entrar no painel' }}</h2>
+          </div>
+          <Button
+            :icon="isDarkMode ? 'pi pi-moon' : 'pi pi-sun'"
+            aria-label="Alternar tema"
+            class="theme-button"
+            severity="secondary"
+            text
+            rounded
+            @click="changeTheme"
+            v-tooltip.left="isDarkMode ? 'Tema claro' : 'Tema escuro'"
+          />
+        </div>
+
+        <form v-if="!isRegisterMode" @submit.prevent="login" class="auth-form">
+          <div>
+            <label for="email" class="label">Email</label>
+            <InputText id="email" type="email" name="email" v-model="email" placeholder="voce@orbitus.app" autocomplete="email" class="w-full" />
           </div>
 
-          <p class="mt-2">Gerencie suas finanças de forma simples e eficiente. Controle suas despesas, receitas e muito
-            mais em um só
-            lugar.</p>
+          <div>
+            <label for="pass" class="label">Senha</label>
+            <InputGroup>
+              <InputText
+                id="pass"
+                :type="showPass ? 'text' : 'password'"
+                name="pass"
+                v-model="pass"
+                placeholder="Digite sua senha"
+                autocomplete="current-password"
+              />
+              <InputGroupAddon>
+                <Button type="button" :icon="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" text @click="changePassView" />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
 
-          <Carousel :value="itemsCarousel" :numVisible="1" :numScroll="1" verticalViewPortHeight="330px"
-            containerClass="flex items-center">
-            <template #item="slotProps">
-              <div class="carousel-item border border-surface-200 dark:border-surface-700 rounded m-2 p-4">
-                <div class="mb-4">
-                  <div class="relative mx-auto">
-                    <img :src="slotProps.data.image" :alt="slotProps.data.name" class="w-full rounded" />
-                  </div>
-                </div>
-                <div class="mb-4 font-medium text-center text-success">{{ slotProps.data.name }}</div>
-              </div>
-            </template>
-          </Carousel>
+          <button type="button" class="switch-mode" @click="isRegisterMode = true">
+            Não tem login? Criar conta
+          </button>
 
-          <p class="text-center text-small"> Desenvolvido por <a href="https://github.com/superTheus" target="_blank"
-              class="simple-link text-success">
-              Matheus Souza </a> </p>
+          <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full" :loading="loading" />
+        </form>
+
+        <form v-else class="auth-form" @submit.prevent="create">
+          <div>
+            <label for="name" class="label">Nome</label>
+            <InputText id="name" type="text" name="name" v-model="formRegister.name" placeholder="Seu nome" autocomplete="name" class="w-full" />
+          </div>
+
+          <div>
+            <label for="register-email" class="label">Email</label>
+            <InputText id="register-email" type="email" name="email" v-model="formRegister.email" placeholder="voce@orbitus.app" autocomplete="email" class="w-full" />
+          </div>
+
+          <div>
+            <label for="register-pass" class="label">Senha</label>
+            <InputGroup>
+              <InputText
+                id="register-pass"
+                :type="formRegister.showPass ? 'text' : 'password'"
+                name="pass"
+                v-model="formRegister.pass"
+                placeholder="Digite sua senha"
+                autocomplete="new-password"
+              />
+              <InputGroupAddon>
+                <Button type="button" :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" text @click="formRegister.showPass = !formRegister.showPass" />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+
+          <div>
+            <label for="confirm-pass" class="label">Confirmar senha</label>
+            <InputGroup>
+              <InputText
+                id="confirm-pass"
+                :type="formRegister.showConfirmPass ? 'text' : 'password'"
+                name="confirm-pass"
+                v-model="formRegister.confirmPass"
+                placeholder="Repita sua senha"
+                autocomplete="new-password"
+              />
+              <InputGroupAddon>
+                <Button
+                  type="button"
+                  :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  severity="secondary"
+                  text
+                  @click="formRegister.showConfirmPass = !formRegister.showConfirmPass"
+                />
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+
+          <button type="button" class="switch-mode" @click="isRegisterMode = false">
+            Já tem login? Entrar
+          </button>
+
+          <Button type="submit" label="Cadastrar" icon="pi pi-user-plus" class="w-full" :loading="loading" />
+        </form>
+
+        <OrbitLoader v-if="loading" compact label="Orbi está preparando seu painel..." />
+
+        <div class="highlight-grid">
+          <div v-for="item in highlights" :key="item.label">
+            <i :class="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </div>
         </div>
       </div>
-
-      <div class="right-container">
-        <form v-if="!isRegisterMode" @submit.prevent="login">
-          <div class="flex flex-column gap-1 mt-3">
-            <h1>Gerencie suas <span class="text-success text-strong"> finanças </span> com facilidade e <span
-                class="text-success text-strong"> eficiência! </span> 💰</h1>
-            <h3> Faça Login para poder gerenciar sua vida financeira ! </h3>
-          </div>
-
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="email" class="label">Email</label>
-            <InputText type="email" name="email" v-model="email" placeholder="exemplo@mail.com" />
-          </div>
-
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="pass" class="label">Senha</label>
-            <InputGroup>
-              <InputText :type="showPass ? 'text' : 'password'" name="pass" v-model="pass" placeholder="******" />
-              <InputGroupAddon>
-                <Button :icon="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" variant="text"
-                  @click="changePassView" />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <div class="mt-4">
-            <small> Não tem login ? <a href="#" class="simple-link text-success text-strong"
-                @click="isRegisterMode = true"> clique aqui </a> </small>
-          </div>
-
-          <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="mt-4 w-full" :loading="loading" />
-        </form>
-
-        <form class="w-full" v-if="isRegisterMode" @submit.prevent="create">
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="name" class="label">Nome</label>
-            <InputText type="text" name="name" v-model="formRegister.name" placeholder="Ex: Matheus Souza" />
-          </div>
-
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="email" class="label">Email</label>
-            <InputText type="email" name="email" v-model="formRegister.email" placeholder="exemplo@mail.com" />
-          </div>
-
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="pass" class="label">Senha</label>
-            <InputGroup>
-              <InputText :type="formRegister.showPass ? 'text' : 'password'" name="pass" v-model="formRegister.pass"
-                placeholder="******" />
-              <InputGroupAddon>
-                <Button :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary"
-                  variant="text" @click="formRegister.showPass = !formRegister.showPass" />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <div class="flex flex-column gap-1 mt-3">
-            <label for="pass" class="label">Confirmar Senha</label>
-            <InputGroup>
-              <InputText :type="formRegister.showConfirmPass ? 'text' : 'password'" name="pass"
-                v-model="formRegister.confirmPass" placeholder="******" />
-              <InputGroupAddon>
-                <Button :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary"
-                  variant="text" @click="formRegister.showConfirmPass = !formRegister.showConfirmPass" />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <div class="mt-4">
-            <small> Já tem login ? <a href="#" class="simple-link text-success text-strong"
-                @click="isRegisterMode = false"> clique aqui </a> </small>
-          </div>
-
-          <Button type="submit" label="Cadastrar" class="mt-4 w-full" :loading="loading" />
-        </form>
-      </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
+
+<style scoped lang="scss">
+.home-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(25rem, 0.85fr);
+  gap: clamp(1rem, 2vw, 2rem);
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.brand-side,
+.auth-side {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-side {
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+}
+
+.hero-logo {
+  width: min(100%, 58rem);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: var(--app-card-shadow);
+}
+
+.brand-copy {
+  max-width: 44rem;
+}
+
+.brand-copy h1 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.brand-copy span {
+  display: block;
+  max-width: 34rem;
+  margin-top: 0.8rem;
+  color: var(--app-text-muted);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  font-weight: 500;
+}
+
+.promo-card {
+  width: min(100%, 34rem);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--app-card-shadow);
+}
+
+.promo-card img {
+  display: block;
+  width: 100%;
+}
+
+.auth-side {
+  display: grid;
+  align-items: center;
+}
+
+.auth-card {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100%, 31rem);
+  margin-left: auto;
+  padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.auth-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.auth-top h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.theme-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.switch-mode {
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  color: var(--orbit-cyan);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.highlight-grid div {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  min-height: 5rem;
+  padding: 0.65rem 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-soft);
+  text-align: center;
+}
+
+.highlight-grid i {
+  color: var(--orbit-cyan);
+  font-size: 1.25rem;
+}
+
+.highlight-grid span {
+  color: var(--app-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+  .home-page {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-side {
+    align-content: start;
+  }
+
+  .auth-card {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-page {
+    padding: 0.75rem;
+  }
+
+  .brand-copy h1 {
+    font-size: 2.1rem;
+  }
+
+  .promo-card {
+    display: none;
+  }
+
+  .highlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

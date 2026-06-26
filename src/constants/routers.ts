@@ -1,31 +1,31 @@
-import BankAccounts from "@/views/app/BankAccounts/BankAccounts.vue";
-import BillsView from "@/views/app/Bills/BillsView.vue";
-import DashboardView from "@/views/app/Dashboard/DashboardView.vue";
-import KanbanView from "@/views/app/Kanban/KanbanView.vue";
+import BankAccounts from '@/views/app/BankAccounts/BankAccounts.vue';
+import BillsView from '@/views/app/Bills/BillsView.vue';
+import DashboardView from '@/views/app/Dashboard/DashboardView.vue';
+import KanbanView from '@/views/app/Kanban/KanbanView.vue';
 
 export const Routers = [
   {
-    path: '/dashboards',
+    path: 'dashboards',
     name: 'Dashboard',
     component: DashboardView,
-    icon: 'pi-chart-bar'
+    icon: 'pi-chart-line',
   },
   {
-    path: '/bills',
+    path: 'bills',
     name: 'Contas',
     component: BillsView,
-    icon: 'pi-file',
+    icon: 'pi-wallet',
   },
   {
-    path: '/banks',
+    path: 'banks',
     name: 'Contas Bancárias',
     component: BankAccounts,
     icon: 'pi-building-columns',
   },
   {
-    path: '/kanban',
+    path: 'kanban',
     name: 'Kanban',
     component: KanbanView,
-    icon: 'pi-objects-column'
-  }
-]
+    icon: 'pi-objects-column',
+  },
+];

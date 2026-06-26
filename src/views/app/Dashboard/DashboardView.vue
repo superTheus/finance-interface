@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ValuesTotals from "@/components/ValuesTotals.vue";
+import OrbitLoader from "@/components/OrbitLoader.vue";
 import { mounths } from "@/constants/constants";
 import { Api } from "@/services/api";
 import { useUserStore } from "@/stores/user";
@@ -7,6 +8,7 @@ import type { BankAccounts, Bills, BillsRequest, ResumeBills, ResumeBillsYearly 
 import moment from "moment";
 import { computed, ref, watch } from "vue";
 import { Utils } from "@/services/utils";
+import promoRocket from "@/assets/brand/orbitus-promo-rocket.png";
 
 const user = useUserStore();
 const api = new Api();
@@ -92,14 +94,14 @@ const chartData = computed(() => {
     datasets: [
       {
         label: 'A receber',
-        backgroundColor: '#22c55e',
-        borderColor: '#16a34a',
+        backgroundColor: '#00D4C8',
+        borderColor: '#00D4C8',
         data: dataReceber
       },
       {
         label: 'A pagar',
-        backgroundColor: '#ef4444',
-        borderColor: '#dc2626',
+        backgroundColor: '#FF5470',
+        borderColor: '#FF5470',
         data: dataPagar
       }
     ]
@@ -125,8 +127,8 @@ const balanceChartData = computed(() => ({
     {
       label: 'Saldo mensal',
       data: monthLabels.value.map((label) => yearlyResumeMap.value.get(normalizeMonthKey(label))?.saldo ?? 0),
-      borderColor: '#0f766e',
-      backgroundColor: 'rgba(15, 118, 110, 0.15)',
+      borderColor: '#6C5CE7',
+      backgroundColor: 'rgba(108, 92, 231, 0.18)',
       fill: true,
       tension: 0.35
     }
@@ -141,7 +143,7 @@ const monthlyProjectionData = computed(() => ({
         resumeBills.value.totalPago + resumeBills.value.totalRecebido,
         resumeBills.value.totalFaltaPagar + resumeBills.value.totalFaltaReceber
       ],
-      backgroundColor: ['#22c55e', '#f59e0b'],
+      backgroundColor: ['#00D4C8', '#FFB020'],
       borderWidth: 0
     }
   ]
@@ -151,7 +153,7 @@ const compactChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'bottom', labels: { boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } } },
+    legend: { position: 'bottom', labels: { color: '#AEB6D3', boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } } },
     tooltip: {
       callbacks: {
         label: (context: { label?: string, raw: number }) => `${context.label || 'Valor'}: ${utils.formatCurrency(Number(context.raw || 0))}`
@@ -166,7 +168,7 @@ const chartOptions = computed(() => ({
   plugins: {
     legend: {
       position: 'bottom',
-      labels: { boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } }
+      labels: { color: '#AEB6D3', boxWidth: 12, boxHeight: 8, padding: 12, font: { size: 11 } }
     },
     tooltip: {
       callbacks: {
@@ -180,12 +182,16 @@ const chartOptions = computed(() => ({
   },
   scales: {
     x: {
-      stacked: false
+      stacked: false,
+      ticks: { color: '#AEB6D3' },
+      grid: { color: 'rgba(174, 182, 211, 0.12)' }
     },
     y: {
       ticks: {
+        color: '#AEB6D3',
         callback: (value: string | number) => utils.formatCurrency(Number(value))
-      }
+      },
+      grid: { color: 'rgba(174, 182, 211, 0.12)' }
     }
   }
 }));
@@ -342,8 +348,7 @@ loadBankAccounts();
 </script>
 
 <template>
-  <Card class="dashboard-page">
-    <template #title>
+  <section class="dashboard-page app-page">
       <div class="dashboard-hero">
         <div>
           <p class="eyebrow">Visão financeira</p>
@@ -353,10 +358,17 @@ loadBankAccounts();
         <Select v-model="currentMounth" :options="monthsSelected.slice(1)" optionLabel="name" option-value="code"
           placeholder="Selecione um mês" class="month-select" />
       </div>
-    </template>
 
-    <template #content>
-      <div class="card-resume-container my-3">
+      <div class="orbit-banner orbit-panel">
+        <div>
+          <p class="eyebrow">Rota do mês</p>
+          <h3>Organize hoje para conquistar amanhã.</h3>
+          <span>Seu universo financeiro em boas mãos, com dados do período selecionado.</span>
+        </div>
+        <img :src="promoRocket" alt="Orbi no foguete" />
+      </div>
+
+      <div class="card-resume-container">
         <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
           class="card-resume card-resume_danger" :hint="`${formatQuantity(resumeBills.quantidadeTotalPagar)} lançamentos`" />
         <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
@@ -375,7 +387,7 @@ loadBankAccounts();
             <div v-if="!loading" class="card-chart">
               <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
             </div>
-            <div v-else class="empty-state">Carregando gráfico...</div>
+            <OrbitLoader v-else compact label="Orbi está calculando o gráfico..." />
           </template>
         </Card>
         <Card class="span-4">
@@ -400,27 +412,136 @@ loadBankAccounts();
           </template>
         </Card>
       </div>
-    </template>
-  </Card>
+  </section>
 </template>
 
 <style lang="scss" scoped>
-.dashboard-page :deep(.p-card-body) { padding: 1.15rem 1.25rem !important; }
-.dashboard-page :deep(.p-card-content) { padding-top: 0.65rem !important; }
-.dashboard-hero { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
-.dashboard-hero h2 { margin:0; font-size:clamp(1.35rem,2vw,1.75rem); font-weight:750; color: var(--app-title-color); letter-spacing:-.035em; }
-.dashboard-hero span { display:block; max-width: 34rem; margin-top:.2rem; font-size:.88rem; line-height:1.35; }
-.dashboard-hero span, .eyebrow { color: var(--app-muted-color); }
-.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.68rem; font-weight:750; margin-bottom:.2rem; }
-.month-select { min-width: 13rem; }
-.card-resume-container { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin: .85rem 0 !important; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:.85rem; margin-top:.85rem; }
-.span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
-.card-chart { width:100%; height: clamp(18rem, 42vh, 27rem); position:relative; }
-.mini-chart { height: clamp(13rem, 28vh, 17rem); }
-.chart { width:100%; height:100%; }
-.dashboard-grid :deep(.p-card) { height:100%; background: rgba(255,255,255,.9); }
-.dashboard-grid :deep(.p-card-body) { height:100%; }
-@media (max-width: 1024px) { .span-8,.span-4,.span-7,.span-5 { grid-column: 1 / -1; } .card-resume-container { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width: 640px) { .card-resume-container { grid-template-columns:1fr; } .month-select { width:100%; } .card-chart,.mini-chart { height: 18rem; } }
+.dashboard-page {
+  align-content: start;
+}
+
+.month-select {
+  min-width: 13rem;
+}
+
+.orbit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 11rem;
+  padding: 1rem 1.2rem;
+  overflow: hidden;
+}
+
+.orbit-banner h3 {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--app-text);
+  font-size: clamp(1.35rem, 2.2vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.orbit-banner span {
+  display: block;
+  max-width: 30rem;
+  margin-top: 0.55rem;
+  color: var(--app-text-muted);
+  font-weight: 500;
+}
+
+.orbit-banner img {
+  width: min(44%, 28rem);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.card-resume-container {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.85rem;
+}
+
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-7 {
+  grid-column: span 7;
+}
+
+.span-5 {
+  grid-column: span 5;
+}
+
+.card-chart {
+  position: relative;
+  width: 100%;
+  height: clamp(18rem, 42vh, 27rem);
+}
+
+.mini-chart {
+  height: clamp(13rem, 28vh, 17rem);
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-grid :deep(.p-card) {
+  height: 100%;
+}
+
+.dashboard-grid :deep(.p-card-body) {
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .span-8,
+  .span-4,
+  .span-7,
+  .span-5 {
+    grid-column: 1 / -1;
+  }
+
+  .card-resume-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .card-resume-container {
+    grid-template-columns: 1fr;
+  }
+
+  .month-select {
+    width: 100%;
+  }
+
+  .orbit-banner {
+    display: grid;
+  }
+
+  .orbit-banner img {
+    width: 100%;
+  }
+
+  .card-chart,
+  .mini-chart {
+    height: 18rem;
+  }
+}
 </style>

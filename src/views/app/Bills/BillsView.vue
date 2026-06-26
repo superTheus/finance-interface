@@ -378,7 +378,7 @@ const applyFilter = (filterSelected: FilterBill) => {
   };
 
   if (filterSelected.statusFilter !== 'TO') {
-    addChip(filterSelected.statusFilter === 'PA' ? 'PagoS' : 'PendenteS', filterSelected, 'statusFilter', 'TO');
+    addChip(filterSelected.statusFilter === 'PA' ? 'Pagos' : 'Pendentes', filterSelected, 'statusFilter', 'TO');
     currentFilters.filter = {
       ...currentFilters.filter,
       status: filterSelected.statusFilter
@@ -581,8 +581,7 @@ loadAllData();
 </script>
 
 <template>
-  <Card class="bills-page">
-    <template #title>
+  <section class="bills-page app-page">
       <div class="list-header">
         <div>
           <p class="eyebrow">Gestão financeira</p>
@@ -591,13 +590,10 @@ loadAllData();
         </div>
       <div class="page-actions">
         <Button label="Filtrar" icon="pi pi-filter" class="p-button-secondary" @click="showFilter = true" />
-        <Button label="Nova Conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
+        <Button label="Nova conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
       </div>
       </div>
-    </template>
-
-    <template #content>
-      <div class="mt-3 flex gap-2">
+      <div class="filter-chips">
         <div v-for="item in ChipsFilter" :key="item.label">
           <Chip :label="item.label" removable>
             <template #removeicon="{ keydownCallback }">
@@ -607,14 +603,14 @@ loadAllData();
         </div>
       </div>
 
-      <div class="card-resume-container mt-3">
-        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-file"
+      <div class="card-resume-container">
+        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
           class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Total falta pagar" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Falta pagar" icon="pi pi-clock"
           class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Total falta receber" icon="pi pi-file"
+        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Falta receber" icon="pi pi-hourglass"
           class="card-resume card-resume_green" />
       </div>
 
@@ -622,9 +618,9 @@ loadAllData();
         <h3> {{ total }} Contas encontradas </h3>
       </div>
 
-      <div class="responsive-table mt-3">
+      <div class="responsive-table">
         <DataTable :value="bills" stripedRows tableStyle="min-width: 50rem" sortMode="multiple">
-        <Column field="titulo" header="Titulo">
+        <Column field="titulo" header="Título">
           <template #body="slotProps">
             {{ slotProps.data.titulo }}
             <Badge :value="slotProps.data.tipo === 'R' ? 'Receita' : 'Despesa'"
@@ -662,8 +658,7 @@ loadAllData();
       <div v-if="!bills.length" class="empty-state">Nenhuma conta encontrada para os filtros selecionados.</div>
 
       <Paginator v-model:first="page" :rows="filter.limit" :totalRecords="total"></Paginator>
-    </template>
-  </Card>
+  </section>
 
   <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter">
   </ModalFilters>
@@ -718,7 +713,7 @@ loadAllData();
     <form @submit.prevent="isEditMode ? updateBill() : createBill()">
       <Stepper v-if="!isEditMode" value="1" class="w-full" linear>
         <StepList>
-          <Step value="1">Dados Inicias</Step>
+          <Step value="1">Dados iniciais</Step>
           <Step value="2">Parcelas</Step>
           <Step v-if="formAccount.contaParcelada === 'N' && formAccount.contaFrequente === 'N'" value="3">Pagamento
           </Step>
@@ -736,7 +731,7 @@ loadAllData();
 
               <FloatLabel class="mt-4 w-full">
                 <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
-                <label for="titulo">Titulo</label>
+                <label for="titulo">Título</label>
               </FloatLabel>
 
               <FloatLabel class="mt-4 w-full">
@@ -752,7 +747,7 @@ loadAllData();
 
               <FloatLabel class="mt-4 w-full">
                 <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
-                <label for="descricao">Descrição (Opcional)</label>
+                <label for="descricao">Descrição (opcional)</label>
               </FloatLabel>
 
             </div>
@@ -870,7 +865,7 @@ loadAllData();
 
           <FloatLabel class="mt-4 w-full">
             <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
-            <label for="titulo">Titulo</label>
+            <label for="titulo">Título</label>
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full">
@@ -886,7 +881,7 @@ loadAllData();
 
           <FloatLabel class="mt-4 w-full">
             <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
-            <label for="descricao">Descrição (Opcional)</label>
+            <label for="descricao">Descrição (opcional)</label>
           </FloatLabel>
 
         </div>
@@ -899,41 +894,53 @@ loadAllData();
 </template>
 
 <style scoped lang="scss">
+.bills-page {
+  align-content: start;
+}
+
 .card-resume-container {
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  overflow-x: auto;
-
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
 }
 
-.value-pay {
+.filter-chips {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.list-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
-.list-header h2 { margin:0; font-size:clamp(1.6rem,3vw,2.25rem); font-weight:800; }
-.list-header span, .eyebrow { color: var(--app-muted-color); }
-.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:800; margin-bottom:.25rem; }
-.bills-page :deep(.p-card-content) { padding-top:0; }
-.bills-page :deep(.p-chip) { font-weight:700; }
-.finance-dialog :deep(.p-dialog-content) { overflow-x:hidden; }
-.bill-dialog { width:min(64rem, calc(100vw - 2rem)); }
-.payment-dialog { width:min(34rem, calc(100vw - 2rem)); }
-@media (max-width: 768px) { .card-resume-container { display:grid; grid-template-columns:1fr; } .resume h3 { font-size:1rem; } }
+.resume h3 {
+  color: var(--app-text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.finance-dialog :deep(.p-dialog-content) {
+  overflow-x: hidden;
+}
+
+.bill-dialog {
+  width: min(64rem, calc(100vw - 2rem));
+}
+
+.payment-dialog {
+  width: min(34rem, calc(100vw - 2rem));
+}
+
+@media (max-width: 1024px) {
+  .card-resume-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .card-resume-container {
+    grid-template-columns: 1fr;
+  }
+
+  .resume h3 {
+    font-size: 0.9rem;
+  }
+}
 </style>

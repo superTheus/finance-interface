@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import { Utils } from '@/services/utils';
+import { computed, useAttrs } from 'vue';
+
+defineOptions({
+  inheritAttrs: false,
+});
 
 const props = defineProps({
   value: Number,
   label: String,
   icon: String,
-  class: String,
   hint: String,
 })
 
 const utils = new Utils();
+const attrs = useAttrs();
+const cardClasses = computed(() => ['metric-card', attrs.class]);
 </script>
 
 <template>
-  <Card :class="'metric-card ' + (props.class || '')">
+  <Card :class="cardClasses">
     <template #content>
       <div class="metric-content">
         <span class="metric-icon" aria-hidden="true">
@@ -31,9 +37,8 @@ const utils = new Utils();
 
 <style scoped lang="scss">
 .metric-card {
-  min-width: 0 !important;
-  border: 1px solid color-mix(in srgb, var(--p-content-border-color), transparent 35%);
-  box-shadow: var(--app-card-shadow);
+  min-width: 0;
+  min-height: 7rem;
   overflow: hidden;
 }
 
@@ -44,13 +49,13 @@ const utils = new Utils();
 }
 
 .metric-icon {
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 999px;
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(108, 92, 231, 0.14);
   color: currentColor;
   flex: 0 0 auto;
 }
@@ -59,15 +64,16 @@ const utils = new Utils();
   margin-bottom: 0.15rem;
   opacity: 0.82;
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.2;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1rem, 1.35vw, 1.28rem);
-  font-weight: 750;
-  letter-spacing: -0.03em;
+  color: currentColor;
+  font-size: clamp(1rem, 1.35vw, 1.32rem);
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 small {

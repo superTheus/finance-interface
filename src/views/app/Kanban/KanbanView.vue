@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Api } from '@/services/api'
+import OrbitLoader from '@/components/OrbitLoader.vue'
 import { useUserStore } from '@/stores/user'
 import type { KanbanCard, KanbanCardWithTasks, Tarefas } from '@/types/types'
 import { useConfirm, useToast } from 'primevue'
@@ -369,7 +370,7 @@ onMounted(loadCards)
 </script>
 
 <template>
-  <div class="kanban-page">
+  <div class="kanban-page app-page">
     <div class="kanban-header">
       <h2>Kanban</h2>
       <div class="header-actions">
@@ -379,7 +380,9 @@ onMounted(loadCards)
       </div>
     </div>
 
-    <div v-if="!loading && viewMode === 'kanban'" class="kanban-board">
+    <OrbitLoader v-if="loading" label="Orbi está organizando seus cards..." />
+
+    <div v-else-if="viewMode === 'kanban' && cards.length" class="kanban-board">
       <div v-for="card in cards" :key="card.id" class="kanban-column" @dragover.prevent
         @drop="(event) => onColumnDrop(event, card)">
         <div class="column-header">
@@ -411,7 +414,9 @@ onMounted(loadCards)
       </div>
     </div>
 
-    <div v-else-if="!loading" class="list-view">
+    <div v-else-if="viewMode === 'kanban'" class="empty-state">Nenhum card cadastrado.</div>
+
+    <div v-else class="list-view responsive-table">
       <DataTable :value="listTasks" stripedRows tableStyle="min-width: 60rem">
         <Column field="titulo" header="Tarefa" />
         <Column field="cardTitulo" header="Card" />
@@ -487,16 +492,12 @@ onMounted(loadCards)
 
 <style scoped>
 .kanban-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  align-content: start;
+  min-height: 100%;
 }
 
 .kanban-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
 .header-actions {
@@ -507,11 +508,13 @@ onMounted(loadCards)
 
 .kanban-board {
   display: flex;
-  flex: 1;
+  min-height: 28rem;
   align-items: stretch;
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 92, 231, 0.55) transparent;
 }
 
 .kanban-column {
@@ -519,10 +522,15 @@ onMounted(loadCards)
   flex-direction: column;
   flex: 1;
   min-width: 320px;
-  background: var(--p-content-background);
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(108, 92, 231, 0.12), transparent 42%),
+    var(--app-surface);
   padding: 1rem;
+  box-shadow: var(--app-card-shadow);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .column-header {
@@ -534,6 +542,9 @@ onMounted(loadCards)
 
 .column-header h3 {
   margin: 0;
+  color: var(--app-text);
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .add-task {
@@ -551,15 +562,25 @@ onMounted(loadCards)
 }
 
 .task-card {
-  padding: 0.75rem;
-  border: 1px solid var(--p-content-border-color);
+  padding: 0.8rem;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
-  background: var(--p-surface-0);
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-surface-strong), transparent 8%);
   cursor: grab;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.task-card:hover {
+  border-color: var(--app-border-strong);
+  transform: translateY(-2px);
 }
 
 .task-title {
-  font-weight: 600;
+  font-weight: 800;
   margin-bottom: 0.35rem;
 }
 
@@ -571,6 +592,8 @@ onMounted(loadCards)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+  color: var(--app-text-muted);
 }
 
 .list-view {
@@ -592,11 +615,14 @@ onMounted(loadCards)
 .input-label {
   display: block;
   margin-bottom: 0.35rem;
+  color: var(--app-text-muted);
+  font-weight: 700;
 }
 
 .editor-wrapper :deep(.v-md-editor) {
   border-radius: 8px;
   overflow: hidden;
+  border: 1px solid var(--app-border);
 }
 
 .markdown-preview-wrapper :deep(.v-md-editor-preview) {
@@ -606,5 +632,21 @@ onMounted(loadCards)
 .markdown-preview-wrapper :deep(.v-md-editor-preview img) {
   max-width: 100%;
   height: auto;
+}
+
+@media (max-width: 768px) {
+  .kanban-header,
+  .header-actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .kanban-column {
+    min-width: min(22rem, calc(100vw - 2rem));
+  }
 }
 </style>
