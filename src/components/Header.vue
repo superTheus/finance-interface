@@ -1,31 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useUserStore } from '@/stores/user';
 import { useConfigStore } from '@/stores/config';
 import Config from './Config.vue';
 import MobileMenu from './MobileMenu.vue';
-import brandLogo from '@/assets/brand/orbitus-logo-dark.png';
+import logoDark from '@/assets/images/logos/logo_dark_alternative.png';
+import logoLight from '@/assets/images/logos/logo_light_alternative.png';
 
 const props = defineProps<{ currentPage: string | null }>();
 
-const user = useUserStore();
 const config = useConfigStore();
-
 const visibleConfig = ref(false);
 const visibleMenu = ref(false);
-
-const firstName = computed(() => user.user?.nome?.split(' ')[0] || 'Explorador');
+const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight));
 </script>
 
 <template>
   <div class="header-title orbit-panel">
     <div class="title">
       <img :src="brandLogo" alt="Orbitus" class="mobile-logo" />
-      <div>
-        <p class="eyebrow">Painel Orbitus</p>
-        <h1>{{ props.currentPage }}</h1>
-        <span>Olá, {{ firstName }}. Seu universo financeiro está em rota.</span>
-      </div>
+      <h1>{{ props.currentPage }}</h1>
     </div>
 
     <div class="actions">
@@ -37,16 +30,14 @@ const firstName = computed(() => user.user?.nome?.split(' ')[0] || 'Explorador')
         text
         rounded
         @click="config.changeTheme"
-        v-tooltip.left="config.config.darkMode ? 'Tema claro' : 'Tema escuro'"
       />
       <Button
         icon="pi pi-cog"
-        aria-label="Configurações"
+        aria-label="Configuracoes"
         class="topbar-button"
         severity="secondary"
         text
         rounded
-        v-tooltip.left="'Configurações'"
         @click="visibleConfig = !visibleConfig"
       />
     </div>
@@ -59,13 +50,12 @@ const firstName = computed(() => user.user?.nome?.split(' ')[0] || 'Explorador')
         severity="secondary"
         text
         rounded
-        v-tooltip.left="'Menu'"
         @click="visibleMenu = !visibleMenu"
       />
     </div>
   </div>
 
-  <Drawer v-model:visible="visibleConfig" header="Configurações" position="right">
+  <Drawer v-model:visible="visibleConfig" header="Configuracoes" position="right">
     <Config />
   </Drawer>
 
@@ -79,46 +69,36 @@ const firstName = computed(() => user.user?.nome?.split(' ')[0] || 'Explorador')
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 5.15rem;
-  padding: 0.8rem 1rem;
+  min-height: 3.85rem;
+  padding: 0.55rem 0.75rem;
 }
 
 .title {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.7rem;
   min-width: 0;
 }
 
 .mobile-logo {
   display: none;
-  width: 3.25rem;
-  height: 3.25rem;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--app-border);
+  width: 5.25rem;
+  height: 2.6rem;
+  object-fit: contain;
 }
 
 h1 {
   margin: 0;
   color: var(--app-text);
-  font-size: clamp(1.15rem, 2vw, 1.65rem);
+  font-size: clamp(0.95rem, 1.4vw, 1.18rem);
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.1;
 }
 
-span {
-  display: block;
-  margin-top: 0.12rem;
-  color: var(--app-text-muted);
-  font-size: 0.86rem;
-  font-weight: 500;
-}
-
 .actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .btn-menu {
@@ -126,13 +106,13 @@ span {
 }
 
 .topbar-button {
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 @media (max-width: 768px) {
   .header-title {
-    min-height: 4.75rem;
+    min-height: 3.75rem;
   }
 
   .mobile-logo {
@@ -145,10 +125,6 @@ span {
 
   .btn-menu {
     display: block;
-  }
-
-  span {
-    display: none;
   }
 }
 </style>

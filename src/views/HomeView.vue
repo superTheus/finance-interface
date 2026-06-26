@@ -1,40 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useToast } from 'primevue';
 import { useUserStore } from '@/stores/user';
 import { Api } from '@/services/api';
 import router from '@/router';
-import { useConfigStore } from '@/stores/config';
 import OrbitLoader from '@/components/OrbitLoader.vue';
-import heroDark from '@/assets/brand/orbitus-hero-dark.png';
-import promoRocket from '@/assets/brand/orbitus-promo-rocket.png';
+import logoDark from '@/assets/images/logos/logo_dark.png';
 
-const config = useConfigStore();
-const email = ref('');
-const pass = ref('');
 const toast = useToast();
-const showPass = ref(false);
-const loading = ref(false);
-const isRegisterMode = ref(false);
 const userStore = useUserStore();
 const api = new Api();
-const isDarkMode = ref(config.config?.darkMode);
 
-const formRegister = ref({
-  name: '',
-  email: '',
-  pass: '',
-  confirmPass: '',
-  showPass: false,
-  showConfirmPass: false,
+const email = ref('');
+const pass = ref('');
+const showPass = ref(false);
+const loading = ref(false);
+
+onMounted(() => {
+  document.documentElement.classList.add('dark-mode');
 });
-
-const highlights = [
-  { icon: 'pi pi-chart-line', label: 'Visão clara' },
-  { icon: 'pi pi-bullseye', label: 'Metas em rota' },
-  { icon: 'pi pi-shield', label: 'Dados protegidos' },
-  { icon: 'pi pi-send', label: 'Planos em ação' },
-];
 
 const changePassView = () => {
   showPass.value = !showPass.value;
@@ -65,189 +49,71 @@ const login = async () => {
     loading.value = false;
   }
 };
-
-const create = async () => {
-  try {
-    if (formRegister.value.pass !== formRegister.value.confirmPass) {
-      toast.add({
-        severity: 'error',
-        summary: 'Erro',
-        detail: 'As senhas não conferem',
-        life: 3000,
-      });
-      return;
-    }
-
-    loading.value = true;
-
-    await api.createUser({
-      nome: formRegister.value.name,
-      email: formRegister.value.email,
-      senha: formRegister.value.pass,
-    });
-
-    toast.add({
-      severity: 'success',
-      summary: 'Sucesso',
-      detail: 'Cadastro efetuado com sucesso',
-      life: 3000,
-    });
-
-    isRegisterMode.value = false;
-  } catch (error: any) {
-    toast.add({
-      severity: 'error',
-      summary: 'Erro',
-      detail: error.message,
-      life: 3000,
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
-const changeTheme = () => {
-  isDarkMode.value = !isDarkMode.value;
-  document.documentElement.classList.toggle('dark-mode', isDarkMode.value);
-
-  config.setConfig({
-    ...config.config,
-    darkMode: isDarkMode.value,
-  });
-};
 </script>
 
 <template>
-  <main class="container home-page">
-    <section class="brand-side">
-      <img :src="heroDark" alt="Orbitus - suas finanças, seu universo" class="hero-logo" />
+  <main class="home-page">
+    <div class="space-scene" aria-hidden="true">
+      <span class="star-layer star-layer-back"></span>
+      <span class="star-layer star-layer-mid"></span>
+      <span class="star-layer star-layer-front"></span>
+      <span class="galaxy galaxy-one"></span>
+      <span class="galaxy galaxy-two"></span>
+      <span class="shooting-star"></span>
+    </div>
 
-      <div class="brand-copy">
-        <p class="eyebrow">Centro de comando financeiro</p>
-        <h1>Organize hoje para conquistar amanhã.</h1>
-        <span>Receitas, despesas, bancos e tarefas orbitando no mesmo painel.</span>
-      </div>
+    <section class="login-shell" aria-label="Acesso Orbitus">
+      <div class="brand-side">
+        <img :src="logoDark" alt="Orbitus - suas financas, seu universo" class="brand-logo" />
 
-      <div class="promo-card">
-        <img :src="promoRocket" alt="Mascote Orbitus em um foguete" />
-      </div>
-    </section>
-
-    <section class="auth-side">
-      <div class="auth-card orbit-panel">
-        <div class="auth-top">
-          <div>
-            <p class="eyebrow">{{ isRegisterMode ? 'Nova órbita' : 'Acesso Orbitus' }}</p>
-            <h2>{{ isRegisterMode ? 'Criar conta' : 'Entrar no painel' }}</h2>
-          </div>
-          <Button
-            :icon="isDarkMode ? 'pi pi-moon' : 'pi pi-sun'"
-            aria-label="Alternar tema"
-            class="theme-button"
-            severity="secondary"
-            text
-            rounded
-            @click="changeTheme"
-            v-tooltip.left="isDarkMode ? 'Tema claro' : 'Tema escuro'"
-          />
+        <div class="welcome-copy">
+          <p class="welcome-kicker">Bem-vindo de volta</p>
+          <h1>Entre para continuar sua jornada financeira.</h1>
         </div>
+      </div>
 
-        <form v-if="!isRegisterMode" @submit.prevent="login" class="auth-form">
+      <div class="auth-side">
+        <form class="login-form" @submit.prevent="login">
           <div>
             <label for="email" class="label">Email</label>
-            <InputText id="email" type="email" name="email" v-model="email" placeholder="voce@orbitus.app" autocomplete="email" class="w-full" />
+            <InputText
+              id="email"
+              v-model="email"
+              type="email"
+              name="email"
+              placeholder="voce@email.com"
+              autocomplete="email"
+              class="auth-input"
+            />
           </div>
 
           <div>
             <label for="pass" class="label">Senha</label>
-            <InputGroup>
+            <div class="password-control">
               <InputText
                 id="pass"
+                v-model="pass"
                 :type="showPass ? 'text' : 'password'"
                 name="pass"
-                v-model="pass"
-                placeholder="Digite sua senha"
+                placeholder="Sua senha"
                 autocomplete="current-password"
+                class="password-input"
               />
-              <InputGroupAddon>
-                <Button type="button" :icon="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" text @click="changePassView" />
-              </InputGroupAddon>
-            </InputGroup>
+              <button
+                type="button"
+                class="password-toggle"
+                aria-label="Alternar visibilidade da senha"
+                @click="changePassView"
+              >
+                <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </div>
           </div>
 
-          <button type="button" class="switch-mode" @click="isRegisterMode = true">
-            Não tem login? Criar conta
-          </button>
-
-          <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full" :loading="loading" />
+          <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full submit-button" :loading="loading" />
         </form>
 
-        <form v-else class="auth-form" @submit.prevent="create">
-          <div>
-            <label for="name" class="label">Nome</label>
-            <InputText id="name" type="text" name="name" v-model="formRegister.name" placeholder="Seu nome" autocomplete="name" class="w-full" />
-          </div>
-
-          <div>
-            <label for="register-email" class="label">Email</label>
-            <InputText id="register-email" type="email" name="email" v-model="formRegister.email" placeholder="voce@orbitus.app" autocomplete="email" class="w-full" />
-          </div>
-
-          <div>
-            <label for="register-pass" class="label">Senha</label>
-            <InputGroup>
-              <InputText
-                id="register-pass"
-                :type="formRegister.showPass ? 'text' : 'password'"
-                name="pass"
-                v-model="formRegister.pass"
-                placeholder="Digite sua senha"
-                autocomplete="new-password"
-              />
-              <InputGroupAddon>
-                <Button type="button" :icon="formRegister.showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" severity="secondary" text @click="formRegister.showPass = !formRegister.showPass" />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <div>
-            <label for="confirm-pass" class="label">Confirmar senha</label>
-            <InputGroup>
-              <InputText
-                id="confirm-pass"
-                :type="formRegister.showConfirmPass ? 'text' : 'password'"
-                name="confirm-pass"
-                v-model="formRegister.confirmPass"
-                placeholder="Repita sua senha"
-                autocomplete="new-password"
-              />
-              <InputGroupAddon>
-                <Button
-                  type="button"
-                  :icon="formRegister.showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                  severity="secondary"
-                  text
-                  @click="formRegister.showConfirmPass = !formRegister.showConfirmPass"
-                />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <button type="button" class="switch-mode" @click="isRegisterMode = false">
-            Já tem login? Entrar
-          </button>
-
-          <Button type="submit" label="Cadastrar" icon="pi pi-user-plus" class="w-full" :loading="loading" />
-        </form>
-
-        <OrbitLoader v-if="loading" compact label="Orbi está preparando seu painel..." />
-
-        <div class="highlight-grid">
-          <div v-for="item in highlights" :key="item.label">
-            <i :class="item.icon"></i>
-            <span>{{ item.label }}</span>
-          </div>
-        </div>
+        <OrbitLoader v-if="loading" compact label="Entrando..." />
       </div>
     </section>
   </main>
@@ -255,176 +121,370 @@ const changeTheme = () => {
 
 <style scoped lang="scss">
 .home-page {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(25rem, 0.85fr);
-  gap: clamp(1rem, 2vw, 2rem);
+  place-items: center;
   min-height: 100vh;
   padding: clamp(1rem, 3vw, 2rem);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(108, 92, 231, 0.24), transparent 42%),
+    radial-gradient(ellipse at 12% 18%, rgba(0, 212, 200, 0.12), transparent 34%),
+    linear-gradient(145deg, #030713 0%, #090d1e 45%, #0d1024 100%);
 }
 
-.brand-side,
-.auth-side {
+.space-scene,
+.star-layer,
+.galaxy,
+.shooting-star {
+  position: absolute;
+  pointer-events: none;
+}
+
+.space-scene {
+  inset: 0;
+  overflow: hidden;
+}
+
+.star-layer {
+  inset: -20%;
+  opacity: 0.72;
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
+
+.star-layer-back {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.36) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(124, 103, 255, 0.28) 0 1px, transparent 1.6px);
+  background-position:
+    0 0,
+    4rem 7rem;
+  background-size:
+    8rem 8rem,
+    13rem 13rem;
+  animation: starDriftBack 48s linear infinite;
+}
+
+.star-layer-mid {
+  opacity: 0.58;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.7px),
+    radial-gradient(circle, rgba(0, 212, 200, 0.44) 0 1px, transparent 1.5px);
+  background-position:
+    2rem 5rem,
+    10rem 3rem;
+  background-size:
+    11rem 11rem,
+    17rem 17rem;
+  animation: starDriftMid 34s linear infinite;
+}
+
+.star-layer-front {
+  opacity: 0.4;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(255, 176, 32, 0.55) 0 1px, transparent 1.8px);
+  background-position:
+    7rem 9rem,
+    1rem 2rem;
+  background-size:
+    18rem 18rem,
+    24rem 24rem;
+  animation:
+    starDriftFront 26s linear infinite,
+    starPulse 4.6s ease-in-out infinite alternate;
+}
+
+.galaxy {
+  width: clamp(18rem, 36vw, 34rem);
+  aspect-ratio: 1.8 / 1;
+  filter: blur(18px);
+  opacity: 0.42;
+  transform: rotate(-18deg);
+  mix-blend-mode: screen;
+}
+
+.galaxy-one {
+  left: -7rem;
+  top: 8%;
+  background:
+    conic-gradient(from 20deg, transparent, rgba(108, 92, 231, 0.56), rgba(0, 212, 200, 0.28), transparent 62%),
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.12), transparent 62%);
+  border-radius: 50%;
+  animation: galaxyFloatOne 20s ease-in-out infinite alternate;
+}
+
+.galaxy-two {
+  right: -9rem;
+  bottom: 7%;
+  width: clamp(20rem, 42vw, 42rem);
+  background:
+    conic-gradient(from 140deg, transparent, rgba(255, 84, 112, 0.34), rgba(255, 176, 32, 0.2), rgba(124, 103, 255, 0.4), transparent 72%),
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.1), transparent 68%);
+  border-radius: 50%;
+  animation: galaxyFloatTwo 24s ease-in-out infinite alternate;
+}
+
+.shooting-star {
+  top: 18%;
+  left: 68%;
+  width: 9rem;
+  height: 1px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92), transparent);
+  transform: rotate(-28deg);
+  animation: shootingStar 8s ease-in-out infinite;
+}
+
+.login-shell {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+  width: min(100%, 72rem);
+  min-height: min(37rem, calc(100vh - 4rem));
 }
 
 .brand-side {
   display: grid;
-  align-content: center;
-  gap: 1rem;
+  justify-items: start;
+  gap: clamp(1rem, 2vw, 1.35rem);
+  padding-right: clamp(0rem, 3vw, 2rem);
 }
 
-.hero-logo {
-  width: min(100%, 58rem);
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  box-shadow: var(--app-card-shadow);
+.brand-logo {
+  display: block;
+  width: min(100%, 32rem);
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 50px rgba(0, 0, 0, 0.36));
 }
 
-.brand-copy {
-  max-width: 44rem;
+.welcome-copy {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 28rem;
 }
 
-.brand-copy h1 {
+.welcome-kicker {
   margin: 0;
-  color: var(--app-text);
-  font-size: clamp(2rem, 4vw, 4.2rem);
+  color: var(--orbit-cyan);
+  font-size: 0.82rem;
   font-weight: 800;
-  line-height: 1.04;
   letter-spacing: 0;
+  text-transform: uppercase;
 }
 
-.brand-copy span {
-  display: block;
-  max-width: 34rem;
-  margin-top: 0.8rem;
-  color: var(--app-text-muted);
-  font-size: clamp(1rem, 1.4vw, 1.2rem);
-  font-weight: 500;
-}
-
-.promo-card {
-  width: min(100%, 34rem);
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: var(--app-card-shadow);
-}
-
-.promo-card img {
-  display: block;
-  width: 100%;
+.welcome-copy h1 {
+  max-width: 26rem;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.6rem, 2.4vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: 0;
+  text-shadow: 0 18px 45px rgba(0, 0, 0, 0.42);
 }
 
 .auth-side {
   display: grid;
-  align-items: center;
+  gap: 1rem;
+  width: 100%;
 }
 
-.auth-card {
+.login-form {
   display: grid;
-  gap: 1.25rem;
-  width: min(100%, 31rem);
-  margin-left: auto;
-  padding: clamp(1rem, 2vw, 1.4rem);
+  gap: 1.15rem;
+  width: 100%;
+  padding: clamp(1.1rem, 2.5vw, 1.6rem);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--app-radius);
+  background:
+    linear-gradient(145deg, rgba(108, 92, 231, 0.16), transparent 48%),
+    rgba(18, 23, 39, 0.78);
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
 }
 
-.auth-top {
+.login-form .label {
+  color: rgba(247, 247, 251, 0.72);
+}
+
+.submit-button {
+  min-height: 3.2rem;
+  margin-top: 0.25rem;
+}
+
+:deep(.auth-input) {
+  width: 100%;
+  height: 3.2rem;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  background: rgba(9, 13, 30, 0.52) !important;
+}
+
+:deep(.auth-input::placeholder),
+:deep(.password-input::placeholder) {
+  color: rgba(247, 247, 251, 0.48) !important;
+}
+
+.password-control {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
+  align-items: center;
+  width: 100%;
+  height: 3.2rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--app-radius);
+  color: #ffffff;
+  background: rgba(9, 13, 30, 0.52);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.auth-top h2 {
-  margin: 0;
-  color: var(--app-text);
-  font-size: clamp(1.6rem, 3vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: 0;
+.password-control:focus-within {
+  border-color: var(--orbit-cyan);
+  box-shadow: 0 0 0 0.18rem rgba(0, 212, 200, 0.14);
 }
 
-.theme-button {
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: 0 0 auto;
+:deep(.password-input) {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
 }
 
-.auth-form {
-  display: grid;
-  gap: 1rem;
-}
-
-.switch-mode {
-  width: fit-content;
-  border: 0;
-  padding: 0;
-  color: var(--orbit-cyan);
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 800;
-  text-align: left;
-}
-
-.highlight-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.highlight-grid div {
+.password-toggle {
   display: grid;
   place-items: center;
-  gap: 0.35rem;
-  min-height: 5rem;
-  padding: 0.65rem 0.35rem;
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  background: var(--app-surface-soft);
-  text-align: center;
+  width: 3.2rem;
+  height: 100%;
+  flex: 0 0 3.2rem;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(247, 247, 251, 0.64);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.highlight-grid i {
-  color: var(--orbit-cyan);
-  font-size: 1.25rem;
+.password-toggle:hover {
+  color: #ffffff;
+  background: rgba(108, 92, 231, 0.18);
 }
 
-.highlight-grid span {
-  color: var(--app-text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+.password-toggle i {
+  font-size: 1.05rem;
 }
 
-@media (max-width: 1024px) {
-  .home-page {
+@keyframes starDriftBack {
+  to {
+    transform: translate3d(5rem, 4rem, 0);
+  }
+}
+
+@keyframes starDriftMid {
+  to {
+    transform: translate3d(-6rem, 5rem, 0);
+  }
+}
+
+@keyframes starDriftFront {
+  to {
+    transform: translate3d(7rem, -4rem, 0);
+  }
+}
+
+@keyframes starPulse {
+  from {
+    opacity: 0.28;
+  }
+
+  to {
+    opacity: 0.62;
+  }
+}
+
+@keyframes galaxyFloatOne {
+  to {
+    transform: translate3d(2.5rem, 1rem, 0) rotate(-8deg) scale(1.08);
+  }
+}
+
+@keyframes galaxyFloatTwo {
+  to {
+    transform: translate3d(-2rem, -1.5rem, 0) rotate(10deg) scale(1.06);
+  }
+}
+
+@keyframes shootingStar {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-28deg);
+  }
+
+  66% {
+    opacity: 0.9;
+  }
+
+  76%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-18rem, 10rem, 0) rotate(-28deg);
+  }
+}
+
+@media (max-width: 860px) {
+  .login-shell {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+    min-height: auto;
   }
 
   .brand-side {
-    align-content: start;
+    justify-items: center;
+    text-align: center;
   }
 
-  .auth-card {
-    margin: 0 auto;
+  .brand-logo {
+    width: min(100%, 25rem);
+  }
+
+  .welcome-copy,
+  .welcome-copy h1 {
+    max-width: 26rem;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .home-page {
     padding: 0.75rem;
   }
 
-  .brand-copy h1 {
-    font-size: 2.1rem;
+  .brand-logo {
+    width: min(100%, 19rem);
   }
 
-  .promo-card {
-    display: none;
+  .welcome-copy h1 {
+    font-size: 1.45rem;
   }
 
-  .highlight-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .galaxy {
+    opacity: 0.28;
   }
 }
 </style>

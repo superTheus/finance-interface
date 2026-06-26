@@ -153,38 +153,6 @@ export type FilterBill = {
   datePeriod: Date[]
 }
 
-export type KanbanCard = {
-  id?: number,
-  id_usuario: number,
-  titulo: string,
-  ordem: number,
-  deletado: "S" | "N",
-  dthr_registro?: string,
-  dthr_atualizacao?: string
-}
-
-
-export type KanbanCardWithTasks = KanbanCard & {
-  tarefas?: Tarefas[]
-}
-
-export type KanbanCardResponse = {
-  total: number,
-  data: KanbanCardWithTasks[]
-}
-
-export type Tarefas = {
-  id?: number,
-  id_usuario: number,
-  id_card: number,
-  titulo: string,
-  descricao: string,
-  data_vencimento: string,
-  deletado: "S" | "N",
-  dthr_registro?: string,
-  dthr_atualizacao?: string
-}
-
 export type Notas = {
   id?: number,
   id_usuario: number,

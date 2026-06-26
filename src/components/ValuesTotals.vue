@@ -38,24 +38,24 @@ const cardClasses = computed(() => ['metric-card', attrs.class]);
 <style scoped lang="scss">
 .metric-card {
   min-width: 0;
-  min-height: 7rem;
+  min-height: 5.6rem;
   overflow: hidden;
 }
 
 .metric-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .metric-icon {
-  width: 2.7rem;
-  height: 2.7rem;
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(108, 92, 231, 0.14);
+  background: transparent;
   color: currentColor;
   flex: 0 0 auto;
 }
@@ -63,7 +63,7 @@ const cardClasses = computed(() => ['metric-card', attrs.class]);
 .metric-label {
   margin-bottom: 0.15rem;
   opacity: 0.82;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -71,7 +71,7 @@ const cardClasses = computed(() => ['metric-card', attrs.class]);
 h2 {
   margin: 0;
   color: currentColor;
-  font-size: clamp(1rem, 1.35vw, 1.32rem);
+  font-size: clamp(0.98rem, 1.45vw, 1.25rem);
   font-weight: 800;
   letter-spacing: 0;
 }
