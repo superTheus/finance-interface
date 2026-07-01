@@ -4,7 +4,6 @@ import { useToast } from 'primevue';
 import { useUserStore } from '@/stores/user';
 import { Api } from '@/services/api';
 import router from '@/router';
-import OrbitLoader from '@/components/OrbitLoader.vue';
 import logoDark from '@/assets/images/logos/logo_dark.png';
 
 const toast = useToast();
@@ -112,8 +111,6 @@ const login = async () => {
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full submit-button" :loading="loading" />
         </form>
-
-        <OrbitLoader v-if="loading" compact label="Entrando..." />
       </div>
     </section>
   </main>

@@ -721,7 +721,7 @@ loadAllData();
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
             <div class="form-section form-grid">
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <Select v-model="formAccount.tipo" :options="[
                   { name: 'Despesa', value: 'D' },
                   { name: 'Receita', value: 'R' },
@@ -729,7 +729,7 @@ loadAllData();
                 <label for="titulo">Tipo de Conta</label>
               </FloatLabel>
 
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
                 <label for="titulo">Título</label>
               </FloatLabel>
@@ -745,8 +745,8 @@ loadAllData();
                 <label for="vencimento">Data Vencimento</label>
               </FloatLabel>
 
-              <FloatLabel class="mt-4 w-full">
-                <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
+              <FloatLabel class="mt-4 w-full full">
+                <Textarea id="descricao" v-model="formAccount.descricao" class="w-full bill-description" rows="5" autoResize />
                 <label for="descricao">Descrição (opcional)</label>
               </FloatLabel>
 
@@ -758,7 +758,7 @@ loadAllData();
 
           <StepPanel v-slot="{ activateCallback }" value="2">
             <div v-if="formAccount.contaFrequente === 'N'" class="form-section form-grid">
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <Select v-model="formAccount.contaParcelada" :options="[
                   { name: 'Sim', value: 'S' },
                   { name: 'Não', value: 'N' },
@@ -768,14 +768,14 @@ loadAllData();
             </div>
 
             <div v-if="formAccount.contaParcelada === 'S'" class="form-section form-grid mt-4">
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <InputNumber v-model="formAccount.total_parcelas" :min="2" fluid />
                 <label for="titulo">Total de Parcelas</label>
               </FloatLabel>
             </div>
 
             <div v-if="formAccount.contaParcelada === 'N'" class="form-section form-grid mt-4">
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <Select v-model="formAccount.contaFrequente" :options="[
                   { name: 'Sim', value: 'S' },
                   { name: 'Não', value: 'N' },
@@ -785,7 +785,7 @@ loadAllData();
             </div>
 
             <div v-if="formAccount.contaFrequente === 'S'" class="form-section form-grid mt-4">
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <InputNumber v-model="formAccount.frequencia" :min="2" fluid />
                 <label for="titulo">Quantidade de meses</label>
               </FloatLabel>
@@ -804,13 +804,13 @@ loadAllData();
           <StepPanel v-slot="{ activateCallback }" value="3">
             <div class="form-section form-grid">
 
-              <FloatLabel class="mt-4 w-full">
+              <FloatLabel class="mt-4 w-full full">
                 <Select v-model="formAccount.status" :options="formAccount.pagoOptions" optionLabel="name"
                   optionValue="value" placeholder="Selecione status de pagamento" class="w-full" />
                 <label for="vencimento">Pagamento</label>
               </FloatLabel>
 
-              <div v-if="formAccount.status == 'PA'">
+              <div v-if="formAccount.status == 'PA'" class="full">
 
                 <div class="value-pay">
                   <h2 :class="formAccount.tipo === 'D' ? 'text-danger' : 'text-success'"> {{
@@ -855,7 +855,7 @@ loadAllData();
 
       <div v-if="isEditMode">
         <div class="form-section form-grid">
-          <FloatLabel class="mt-4 w-full">
+          <FloatLabel class="mt-4 w-full full">
             <Select v-model="formAccount.tipo" :options="[
               { name: 'Despesa', value: 'D' },
               { name: 'Receita', value: 'R' },
@@ -863,7 +863,7 @@ loadAllData();
             <label for="titulo">Tipo de Conta</label>
           </FloatLabel>
 
-          <FloatLabel class="mt-4 w-full">
+          <FloatLabel class="mt-4 w-full full">
             <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
             <label for="titulo">Título</label>
           </FloatLabel>
@@ -879,8 +879,8 @@ loadAllData();
             <label for="vencimento">Data Vencimento</label>
           </FloatLabel>
 
-          <FloatLabel class="mt-4 w-full">
-            <Textarea id="descricao" v-model="formAccount.descricao" class="w-full" rows="5" />
+          <FloatLabel class="mt-4 w-full full">
+            <Textarea id="descricao" v-model="formAccount.descricao" class="w-full bill-description" rows="5" autoResize />
             <label for="descricao">Descrição (opcional)</label>
           </FloatLabel>
 
@@ -922,6 +922,11 @@ loadAllData();
 
 .bill-dialog {
   width: min(64rem, calc(100vw - 2rem));
+}
+
+.bill-description {
+  min-height: 8.5rem;
+  resize: vertical;
 }
 
 .payment-dialog {
