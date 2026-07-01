@@ -9,7 +9,8 @@ import ModalFilters from '@/components/ModalFilters.vue';
 import ValuesTotals from '@/components/ValuesTotals.vue';
 import type { MenuItem } from 'primevue/menuitem';
 import { mounths } from '@/constants/constants';
-import { useConfirm, useToast } from 'primevue';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 
 const user = useUserStore();
 const confirm = useConfirm();
@@ -916,21 +917,9 @@ loadAllData();
   font-weight: 700;
 }
 
-.finance-dialog :deep(.p-dialog-content) {
-  overflow-x: hidden;
-}
-
-.bill-dialog {
-  width: min(64rem, calc(100vw - 2rem));
-}
-
 .bill-description {
   min-height: 8.5rem;
   resize: vertical;
-}
-
-.payment-dialog {
-  width: min(34rem, calc(100vw - 2rem));
 }
 
 @media (max-width: 1024px) {

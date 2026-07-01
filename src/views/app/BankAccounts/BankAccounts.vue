@@ -163,10 +163,12 @@ loadBankAccounts();
         <label for="main">Conta Principal?</label>
       </div>
     </div>
-    <div class="dialog-footer-actions mt-4">
-      <Button label="Cancelar" severity="secondary" outlined @click="isDialogVisible = false" />
-      <Button label="Salvar" class="p-button-primary" @click="isEdit ? update() : create()" />
-    </div>
+    <template #footer>
+      <div class="dialog-footer-actions mt-4">
+        <Button label="Cancelar" severity="secondary" outlined @click="isDialogVisible = false" />
+        <Button label="Salvar" class="p-button-primary" @click="isEdit ? update() : create()" />
+      </div>
+    </template>
   </Dialog>
 </template>
 
@@ -177,10 +179,6 @@ loadBankAccounts();
 
 .responsive-table :deep(.p-datatable) {
   min-height: 14rem;
-}
-
-.bank-dialog {
-  width: min(30rem, calc(100vw - 2rem));
 }
 
 .bank-dialog label {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useToast } from 'primevue';
+import { useToast } from 'primevue/usetoast';
 import { useUserStore } from '@/stores/user';
 import { Api } from '@/services/api';
 import router from '@/router';

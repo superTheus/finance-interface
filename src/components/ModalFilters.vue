@@ -128,10 +128,6 @@ const applyFilters = () => {
 </template>
 
 <style scoped lang="scss">
-.filter-dialog {
-  width: min(42rem, calc(100vw - 2rem));
-}
-
 .filter-section {
   display: grid;
   gap: 0.45rem;

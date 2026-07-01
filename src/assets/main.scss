@@ -235,6 +235,21 @@
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32) !important;
 }
 
+.p-dialog:not(.p-confirmdialog) {
+  --app-dialog-width: 44rem;
+  --app-dialog-height: 42rem;
+
+  display: flex !important;
+  flex-direction: column;
+  width: min(var(--app-dialog-width), calc(100vw - 2rem)) !important;
+  max-width: calc(100vw - 2rem) !important;
+  height: min(
+    var(--app-dialog-height),
+    calc(100dvh - var(--app-safe-area-top) - var(--app-safe-area-bottom) - 2rem)
+  ) !important;
+  max-height: calc(100dvh - var(--app-safe-area-top) - var(--app-safe-area-bottom) - 2rem) !important;
+}
+
 .p-drawer {
   display: flex !important;
   flex-direction: column;
@@ -276,6 +291,18 @@
 .p-drawer-content {
   color: var(--app-text) !important;
   background: transparent !important;
+}
+
+.p-dialog:not(.p-confirmdialog) .p-dialog-header,
+.p-dialog:not(.p-confirmdialog) .p-dialog-footer {
+  flex: 0 0 auto;
+}
+
+.p-dialog:not(.p-confirmdialog) .p-dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .p-dialog-mask {
@@ -360,14 +387,26 @@
   border-color: var(--app-border) !important;
 }
 
+@media screen and (max-width: 1024px) {
+  .p-dialog:not(.p-confirmdialog) {
+    --app-dialog-width: 40rem;
+    --app-dialog-height: 40rem;
+  }
+}
+
 @media screen and (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;
   }
 
-  .p-dialog {
-    width: calc(100vw - 1rem) !important;
-    max-width: calc(100vw - 1rem) !important;
+  .p-dialog:not(.p-confirmdialog) {
+    --app-dialog-width: calc(100vw - 1rem);
+    --app-dialog-height: calc(100dvh - var(--app-safe-area-top) - var(--app-safe-area-bottom) - 1rem);
+
+    width: var(--app-dialog-width) !important;
+    max-width: var(--app-dialog-width) !important;
+    height: var(--app-dialog-height) !important;
+    max-height: var(--app-dialog-height) !important;
   }
 
   .p-drawer-right .p-drawer {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { DynamicDialog, Toast } from 'primevue';
+import DynamicDialog from 'primevue/dynamicdialog';
+import Toast from 'primevue/toast';
 import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import { useConfigStore } from './stores/config';
