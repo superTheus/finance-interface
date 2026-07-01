@@ -12,6 +12,14 @@ onMounted(() => {
   } else {
     document.documentElement.classList.remove('dark-mode');
   }
+
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    navigatorWithStandalone.standalone === true;
+
+  document.documentElement.classList.toggle('pwa-standalone', isStandalone);
 })
 
 </script>

@@ -5,6 +5,13 @@
 :root {
   color-scheme: light;
 
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --app-safe-area-top: var(--safe-area-top);
+  --app-safe-area-bottom: var(--safe-area-bottom);
+
   --orbit-night: #0b1020;
   --orbit-panel: #1a1f2e;
   --orbit-purple: #6c5ce7;
@@ -49,6 +56,11 @@
   --bg-green: rgba(0, 212, 200, 0.14) !important;
   --text-danger: var(--orbit-pink) !important;
   --text-success: var(--orbit-cyan) !important;
+}
+
+.pwa-standalone {
+  --app-safe-area-top: max(var(--safe-area-top), 1rem);
+  --app-safe-area-bottom: max(var(--safe-area-bottom), 0.35rem);
 }
 
 .dark-mode {
@@ -98,9 +110,16 @@ html {
   }
 }
 
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--app-text);
   background: var(--app-bg);
   line-height: 1.45;

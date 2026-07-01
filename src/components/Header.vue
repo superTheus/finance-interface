@@ -69,6 +69,7 @@ const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight)
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   min-height: 3.85rem;
   padding: 0.55rem 0.75rem;
 }
@@ -77,6 +78,7 @@ const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight)
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -94,6 +96,9 @@ h1 {
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {
@@ -103,6 +108,7 @@ h1 {
 
 .btn-menu {
   display: none;
+  flex: 0 0 auto;
 }
 
 .topbar-button {

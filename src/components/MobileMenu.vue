@@ -68,29 +68,35 @@ const isActive = (path: string) => route.path === `/app/${path}`;
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.85rem;
+  min-height: 0;
+  gap: 0.75rem;
 }
 
 .mobile-brand {
+  flex: 0 0 auto;
   width: 100%;
-  height: 4.5rem;
+  height: 3.85rem;
   object-fit: contain;
 }
 
 .menu-container {
-  display: grid;
-  gap: 0.25rem;
-  flex: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.35rem;
   overflow-y: auto;
+  padding-right: 0.1rem;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 0.65rem;
   width: 100%;
-  min-height: 2.65rem;
-  padding: 0.45rem 0.55rem;
+  min-height: 3rem;
+  padding: 0.65rem 0.6rem;
   border: 1px solid transparent;
   border-radius: 8px;
   color: var(--app-text-muted);
@@ -123,6 +129,7 @@ const isActive = (path: string) => route.path === `/app/${path}`;
 
 .actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 0.5rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--app-border);
