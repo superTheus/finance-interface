@@ -21,6 +21,12 @@ const filterType = ref<'d' | 'm'>('m');
 const mounthSelected = ref(0);
 const currentMounth = ref(mounths.find((m) => m.value === moment().month() + 1)?.value || 0);
 const resumeBillsYearly = ref<ResumeBillsYearly[]>([]);
+const monthlyProjectionType = ref<'D' | 'R'>('D');
+
+const monthlyProjectionTypeOptions = [
+  { label: 'Despesas', value: 'D' },
+  { label: 'Receitas', value: 'R' },
+];
 
 const emptyResume = (): ResumeBills => ({
   totalPagar: 0,
@@ -193,19 +199,22 @@ const balanceChartData = computed(() => ({
   ],
 }));
 
-const monthlyProjectionData = computed(() => ({
-  labels: ['Pago/recebido', 'Pendente'],
-  datasets: [
-    {
-      data: [
-        resumeBills.value.totalPago + resumeBills.value.totalRecebido,
-        resumeBills.value.totalFaltaPagar + resumeBills.value.totalFaltaReceber,
-      ],
-      backgroundColor: ['#00D4C8', '#FFB020'],
-      borderWidth: 0,
-    },
-  ],
-}));
+const monthlyProjectionData = computed(() => {
+  const isRevenue = monthlyProjectionType.value === 'R';
+
+  return {
+    labels: [isRevenue ? 'Recebido' : 'Pago', 'Pendente'],
+    datasets: [
+      {
+        data: isRevenue
+          ? [resumeBills.value.totalRecebido, resumeBills.value.totalFaltaReceber]
+          : [resumeBills.value.totalPago, resumeBills.value.totalFaltaPagar],
+        backgroundColor: ['#00D4C8', '#FFB020'],
+        borderWidth: 0,
+      },
+    ],
+  };
+});
 
 const compactChartOptions = computed(() => ({
   responsive: true,
@@ -461,9 +470,21 @@ loadBankAccounts();
       </Card>
 
       <Card class="span-5 chart-card">
-        <template #title><h3>Pago x pendente</h3></template>
+        <template #title>
+          <div class="card-title-row">
+            <h3>Pago x pendente</h3>
+            <SelectButton
+              v-model="monthlyProjectionType"
+              :options="monthlyProjectionTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              :allowEmpty="false"
+              class="chart-type-switch"
+            />
+          </div>
+        </template>
         <template #content>
-          <div class="mini-chart"><Chart type="doughnut" :data="monthlyProjectionData" :options="compactChartOptions" /></div>
+          <div class="mini-chart"><Chart :key="monthlyProjectionType" type="doughnut" :data="monthlyProjectionData" :options="compactChartOptions" /></div>
         </template>
       </Card>
     </div>
@@ -597,6 +618,24 @@ loadBankAccounts();
 .dashboard-grid :deep(.p-card-title h3) {
   margin: 0;
   font-size: clamp(0.92rem, 1.25vw, 1.05rem);
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chart-type-switch {
+  flex: 0 0 auto;
+}
+
+.chart-type-switch :deep(.p-togglebutton) {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .summary-sections {

@@ -1,4 +1,5 @@
 import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, Notas, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, User } from '@/types/types';
+import { getUser } from '@/stores/store';
 import axios, { type AxiosInstance } from 'axios';
 
 export class Api {
@@ -11,6 +12,16 @@ export class Api {
       headers: {
         'Content-Type': 'application/json',
       }
+    });
+
+    this.instance.interceptors.request.use((config) => {
+      const user = getUser();
+
+      if (user?.token && config.headers) {
+        config.headers.Authorization = `Bearer ${user.token}`;
+      }
+
+      return config;
     });
   }
 

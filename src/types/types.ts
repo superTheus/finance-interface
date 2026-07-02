@@ -15,7 +15,8 @@ export interface User {
   id: number,
   nome: string,
   email: string,
-  senha: string,
+  token?: string,
+  senha?: string,
   deletado?: "S" | "N",
   dthr_registro?: string,
   dthr_atualizacao?: string
