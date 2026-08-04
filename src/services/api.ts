@@ -1,4 +1,10 @@
-import type { BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest, Notas, PartialBankAccounts, PartialBills, PartialCategories, PartialUser, PaymentsForms, ResumeBills, ResumeBillsYearly, User } from '@/types/types';
+import type {
+  BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest,
+  CategorySummary, FinancialSettings, Notas, PartialBankAccounts, PartialBills,
+  PartialCategories, PartialUser, PaymentsForms, PurchaseItem, PurchaseOption,
+  PurchasePlanRequest, PurchasePlanResponse, PurchaseProjection, ResumeBills,
+  ResumeBillsYearly, User
+} from '@/types/types';
 import { getUser } from '@/stores/store';
 import axios, { type AxiosInstance } from 'axios';
 
@@ -47,7 +53,7 @@ export class Api {
 
         resolve(response.data);
       } catch (error: any) {
-        reject(error.response.data);
+        reject(error.response?.data || error);
       }
     })
   }
@@ -64,7 +70,7 @@ export class Api {
         const response = await this.instance.post('/private/contas/listar', filters);
         resolve(response.data);
       } catch (error: any) {
-        reject(error.response.data);
+        reject(error.response?.data || error);
       }
     })
   }
@@ -75,7 +81,7 @@ export class Api {
         const response = await this.instance.post(`/private/contas/criar`, bill);
         resolve(response.data);
       } catch (error: any) {
-        reject(error.response.data);
+        reject(error.response?.data || error);
       }
     })
   }
@@ -86,7 +92,7 @@ export class Api {
         const response = await this.instance.put(`/private/contas/atualizar/${id}`, bill);
         resolve(response.data);
       } catch (error: any) {
-        reject(error.response.data);
+        reject(error.response?.data || error);
       }
     })
   }
@@ -185,7 +191,7 @@ export class Api {
       data: Categories[]
     }>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/private/contas-bancarias/listar', filter);
+        const response = await this.instance.post('/private/categorias/listar', filter);
 
         resolve(response.data);
       } catch (error: any) {
@@ -194,7 +200,7 @@ export class Api {
     })
   }
 
-  createCategory(data: Categories): Promise<Categories> {
+  createCategory(data: PartialCategories): Promise<Categories> {
     return new Promise<Categories>(async (resolve, reject) => {
       try {
         const response = await this.instance.post('/private/categorias/criar', data);
@@ -216,6 +222,202 @@ export class Api {
         reject(error.response);
       }
     })
+  }
+
+  async setCategoryActive(id: number, active: boolean): Promise<Categories> {
+    try {
+      const action = active ? 'ativar' : 'inativar';
+      const response = await this.instance.patch(`/private/categorias/${action}/${id}`);
+      return response.data as Categories;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async deleteCategory(id: number): Promise<{ success?: boolean, message?: string, inativada?: boolean }> {
+    try {
+      const response = await this.instance.delete(`/private/categorias/excluir/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async categorySummary(data: {
+    inicio: string,
+    fim: string,
+    modo: 'realizado' | 'previsto'
+  }): Promise<CategorySummary> {
+    try {
+      const response = await this.instance.post('/private/resumos/categorias', data);
+      return response.data as CategorySummary;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async getFinancialSettings(): Promise<FinancialSettings> {
+    try {
+      const response = await this.instance.get('/private/configuracoes-financeiras');
+      return response.data as FinancialSettings;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async updateFinancialSettings(data: FinancialSettings): Promise<FinancialSettings> {
+    try {
+      const response = await this.instance.put('/private/configuracoes-financeiras', data);
+      return response.data as FinancialSettings;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async findPurchaseItems(data: PurchasePlanRequest = {}): Promise<PurchasePlanResponse> {
+    try {
+      const response = await this.instance.post('/private/plano-compras/listar', data);
+      return response.data as PurchasePlanResponse;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async createPurchaseItem(data: Partial<PurchaseItem>): Promise<PurchaseItem> {
+    try {
+      const response = await this.instance.post('/private/plano-compras/criar', data);
+      return response.data as PurchaseItem;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async getPurchaseItem(id: number): Promise<PurchaseItem> {
+    try {
+      const response = await this.instance.get(`/private/plano-compras/${id}`);
+      return response.data as PurchaseItem;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async updatePurchaseItem(id: number, data: Partial<PurchaseItem>): Promise<PurchaseItem> {
+    try {
+      const response = await this.instance.put(`/private/plano-compras/atualizar/${id}`, data);
+      return response.data as PurchaseItem;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async deletePurchaseItem(id: number): Promise<void> {
+    try {
+      await this.instance.delete(`/private/plano-compras/excluir/${id}`);
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async changePurchaseItemStatus(id: number, action: 'cancelar' | 'arquivar'): Promise<PurchaseItem> {
+    try {
+      const response = await this.instance.patch(`/private/plano-compras/${id}/${action}`);
+      return response.data as PurchaseItem;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async projectPurchaseItem(
+    id: number,
+    modo: 'individual' | 'plano_completo' = 'individual'
+  ): Promise<PurchaseProjection> {
+    try {
+      const response = await this.instance.post(`/private/plano-compras/${id}/projetar`, { modo });
+      return response.data as PurchaseProjection;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async projectAllPurchaseItems(): Promise<{
+    modo: 'plano_completo',
+    saldo_bancario_atual: number,
+    reserva_minima: number,
+    saldo_disponivel_agora: number,
+    horizonte_analisado_ate: string,
+    itens: PurchaseProjection[],
+    alertas: string[]
+  }> {
+    try {
+      const response = await this.instance.post('/private/plano-compras/projetar-todos');
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async createPurchaseOption(itemId: number, data: Partial<PurchaseOption>): Promise<PurchaseOption> {
+    try {
+      const response = await this.instance.post(`/private/plano-compras/${itemId}/opcoes/criar`, data);
+      return response.data as PurchaseOption;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async updatePurchaseOption(
+    itemId: number,
+    optionId: number,
+    data: Partial<PurchaseOption>
+  ): Promise<PurchaseOption> {
+    try {
+      const response = await this.instance.put(
+        `/private/plano-compras/${itemId}/opcoes/${optionId}`,
+        data
+      );
+      return response.data as PurchaseOption;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async deletePurchaseOption(itemId: number, optionId: number): Promise<void> {
+    try {
+      await this.instance.delete(`/private/plano-compras/${itemId}/opcoes/${optionId}`);
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async selectPurchaseOption(itemId: number, optionId: number): Promise<PurchaseOption> {
+    try {
+      const response = await this.instance.patch(
+        `/private/plano-compras/${itemId}/opcoes/${optionId}/selecionar`
+      );
+      return response.data as PurchaseOption;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async buyPurchaseItem(id: number, data: {
+    data_compra: string,
+    valor_pago: number,
+    loja?: string,
+    link?: string,
+    observacao?: string,
+    criar_conta: boolean,
+    id_categoria?: number,
+    id_conta_bancaria?: number,
+    id_forma_pagamento?: number,
+    opcao_id?: number
+  }): Promise<PurchaseItem> {
+    try {
+      const response = await this.instance.patch(`/private/plano-compras/${id}/comprar`, data);
+      return response.data as PurchaseItem;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 
   notas = {

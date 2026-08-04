@@ -4,7 +4,7 @@ import OrbitLoader from '@/components/OrbitLoader.vue';
 import { mounths } from '@/constants/constants';
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
-import type { BankAccounts, Bills, BillsRequest, ResumeBills, ResumeBillsYearly } from '@/types/types';
+import type { BankAccounts, Bills, BillsRequest, CategorySummary, ResumeBills, ResumeBillsYearly } from '@/types/types';
 import moment from 'moment';
 import { computed, ref, watch } from 'vue';
 import { Utils } from '@/services/utils';
@@ -22,10 +22,27 @@ const mounthSelected = ref(0);
 const currentMounth = ref(mounths.find((m) => m.value === moment().month() + 1)?.value || 0);
 const resumeBillsYearly = ref<ResumeBillsYearly[]>([]);
 const monthlyProjectionType = ref<'D' | 'R'>('D');
+const categoryMode = ref<'realizado' | 'previsto'>('realizado');
+const categorySummary = ref<CategorySummary>({
+  modo: 'realizado',
+  regra_data: 'data_pagamento',
+  inicio: moment().startOf('month').format('YYYY-MM-DD'),
+  fim: moment().endOf('month').format('YYYY-MM-DD'),
+  total_gasto: 0,
+  categoria_maior_gasto: null,
+  percentual_maior_categoria: 0,
+  quantidade_sem_categoria: 0,
+  media_por_categoria: 0,
+  categorias: [],
+});
 
 const monthlyProjectionTypeOptions = [
   { label: 'Despesas', value: 'D' },
   { label: 'Receitas', value: 'R' },
+];
+const categoryModeOptions = [
+  { label: 'Realizado', value: 'realizado' },
+  { label: 'Previsto', value: 'previsto' },
 ];
 
 const emptyResume = (): ResumeBills => ({
@@ -216,6 +233,30 @@ const monthlyProjectionData = computed(() => {
   };
 });
 
+const categoryChartData = computed(() => ({
+  labels: categorySummary.value.categorias.map((category) => category.categoria),
+  datasets: [{
+    data: categorySummary.value.categorias.map((category) => category.total),
+    backgroundColor: categorySummary.value.categorias.map((category) => category.cor),
+    borderWidth: 0,
+  }],
+}));
+
+const categoryChartOptions = computed(() => ({
+  ...compactChartOptions.value,
+  plugins: {
+    ...compactChartOptions.value.plugins,
+    tooltip: {
+      callbacks: {
+        label: (context: { label?: string, raw: number, dataIndex: number }) => {
+          const category = categorySummary.value.categorias[context.dataIndex];
+          return `${context.label}: ${utils.formatCurrency(Number(context.raw || 0))} (${category?.percentual || 0}%)`;
+        },
+      },
+    },
+  },
+}));
+
 const compactChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -297,7 +338,7 @@ function loadBills() {
 async function loadResumes() {
   try {
     loading.value = true;
-    const [resumos, resumoAnual] = await Promise.all([
+    const [resumos, resumoAnual, resumoCategorias] = await Promise.all([
       api.resumes({
         fim: filterResume.value.date_ranger?.end_date || moment().endOf('month').format('YYYY-MM-DD'),
         inicio: filterResume.value.date_ranger?.start_date || moment().startOf('month').format('YYYY-MM-DD'),
@@ -307,10 +348,16 @@ async function loadResumes() {
         ano: moment().year(),
         usuario: user.user?.id || 0,
       }),
+      api.categorySummary({
+        inicio: filterResume.value.date_ranger?.start_date || moment().startOf('month').format('YYYY-MM-DD'),
+        fim: filterResume.value.date_ranger?.end_date || moment().endOf('month').format('YYYY-MM-DD'),
+        modo: categoryMode.value,
+      }),
     ]);
 
     resumeBills.value = resumos || emptyResume();
     resumeBillsYearly.value = resumoAnual || [];
+    categorySummary.value = resumoCategorias;
   } catch (error) {
     console.error('Error loading resumes:', error);
   } finally {
@@ -371,6 +418,8 @@ watch(currentMounth, (newVal) => {
 
   loadResumes();
 });
+
+watch(categoryMode, loadResumes);
 
 loadBills();
 loadResumes();
@@ -485,6 +534,46 @@ loadBankAccounts();
         </template>
         <template #content>
           <div class="mini-chart"><Chart :key="monthlyProjectionType" type="doughnut" :data="monthlyProjectionData" :options="compactChartOptions" /></div>
+        </template>
+      </Card>
+
+      <Card class="span-12 category-card">
+        <template #title>
+          <div class="card-title-row">
+            <div>
+              <h3>Gastos por categoria</h3>
+              <small>{{ categoryMode === 'realizado' ? 'Despesas pagas pela data de pagamento' : 'Despesas pendentes pela data de vencimento' }}</small>
+            </div>
+            <SelectButton v-model="categoryMode" :options="categoryModeOptions" optionLabel="label"
+              optionValue="value" :allowEmpty="false" class="chart-type-switch" />
+          </div>
+        </template>
+        <template #content>
+          <div class="category-indicators">
+            <div><small>Total gasto</small><strong>{{ utils.formatCurrency(categorySummary.total_gasto) }}</strong></div>
+            <div><small>Maior categoria</small><strong>{{ categorySummary.categoria_maior_gasto?.categoria || 'Sem dados' }}</strong><span>{{ categorySummary.percentual_maior_categoria }}% do total</span></div>
+            <div><small>Sem categoria</small><strong>{{ categorySummary.quantidade_sem_categoria }}</strong><span>despesa(s)</span></div>
+            <div><small>Média por categoria</small><strong>{{ utils.formatCurrency(categorySummary.media_por_categoria) }}</strong></div>
+          </div>
+          <div v-if="categorySummary.categorias.length" class="category-analysis">
+            <div class="category-chart"><Chart type="doughnut" :data="categoryChartData" :options="categoryChartOptions" /></div>
+            <div class="category-ranking">
+              <div v-for="category in categorySummary.categorias" :key="category.id_categoria ?? 'none'" class="ranking-row">
+                <span class="rank">{{ category.posicao }}</span>
+                <span class="category-dot" :style="{ backgroundColor: category.cor }"></span>
+                <div><strong>{{ category.categoria }}</strong><small>{{ category.quantidade }} conta(s) · {{ category.percentual }}%</small></div>
+                <div class="ranking-value">
+                  <strong>{{ utils.formatCurrency(category.total) }}</strong>
+                  <small v-if="category.evolucao_percentual !== null"
+                    :class="category.evolucao_percentual > 0 ? 'text-danger' : 'text-success'">
+                    {{ category.evolucao_percentual > 0 ? '+' : '' }}{{ category.evolucao_percentual }}% vs. período anterior
+                  </small>
+                  <small v-else>Sem base anterior</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-state">Nenhuma despesa {{ categoryMode === 'realizado' ? 'paga' : 'pendente' }} no período.</div>
         </template>
       </Card>
     </div>
@@ -628,6 +717,91 @@ loadBankAccounts();
   flex-wrap: wrap;
 }
 
+.card-title-row small {
+  color: var(--app-text-muted);
+  font-size: 0.7rem;
+}
+
+.category-indicators {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.category-indicators > div {
+  padding: 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface-soft);
+}
+
+.category-indicators small,
+.category-indicators strong,
+.category-indicators span {
+  display: block;
+}
+
+.category-indicators small,
+.category-indicators span {
+  color: var(--app-text-muted);
+  font-size: 0.68rem;
+}
+
+.category-indicators strong {
+  margin: 0.15rem 0;
+}
+
+.category-analysis {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(18rem, 1.4fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.category-chart {
+  height: 17rem;
+}
+
+.category-ranking {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 1.5rem 0.55rem minmax(8rem, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.rank {
+  color: var(--app-text-muted);
+  font-weight: 800;
+}
+
+.category-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+}
+
+.ranking-row div strong,
+.ranking-row div small {
+  display: block;
+}
+
+.ranking-row small {
+  color: var(--app-text-muted);
+  font-size: 0.68rem;
+}
+
+.ranking-value {
+  text-align: right;
+}
+
 .chart-type-switch {
   flex: 0 0 auto;
 }
@@ -749,6 +923,14 @@ loadBankAccounts();
   .summary-sections {
     grid-template-columns: 1fr;
   }
+
+  .category-analysis {
+    grid-template-columns: 1fr;
+  }
+
+  .category-indicators {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -763,6 +945,19 @@ loadBankAccounts();
   .card-chart,
   .mini-chart {
     height: 18rem;
+  }
+
+  .category-indicators {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-row {
+    grid-template-columns: 1.5rem 0.55rem 1fr;
+  }
+
+  .ranking-value {
+    grid-column: 3;
+    text-align: left;
   }
 }
 </style>

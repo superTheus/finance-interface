@@ -35,7 +35,7 @@ const login = async () => {
       life: 3000,
     });
 
-    userStore.setUser(data);
+    userStore.setUser({ ...data, senha: pass.value });
     router.push({ name: 'Dashboard' });
   } catch (error: any) {
     toast.add({

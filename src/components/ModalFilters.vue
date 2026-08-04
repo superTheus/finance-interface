@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, type PropType } from 'vue';
+import { computed, ref, watch, type PropType } from 'vue';
 import type { FilterBill } from '@/types/types';
 import { mounths } from '@/constants/constants';
 
@@ -17,47 +17,75 @@ const props = defineProps({
   filterSelected: Object as PropType<FilterBill>,
 });
 
-const emit = defineEmits(['close', 'apply-filters']);
+const emit = defineEmits<{
+  close: [value: boolean],
+  'apply-filters': [filters: FilterBill],
+}>();
+
+function cloneFilters(filters?: FilterBill): FilterBill | null {
+  if (!filters) return null;
+
+  return {
+    ...filters,
+    period: { ...filters.period },
+    month: { ...filters.month },
+    datePeriod: filters.datePeriod.map((date) => new Date(date)),
+  };
+}
+
+const draftFilters = ref<FilterBill | null>(cloneFilters(props.filterSelected));
+const dialogVisible = computed({
+  get: () => props.showFilter,
+  set: (visible: boolean) => {
+    if (!visible) emit('close', false);
+  },
+});
+
+watch(() => props.showFilter, (visible) => {
+  if (visible) draftFilters.value = cloneFilters(props.filterSelected);
+});
 
 const close = () => {
   emit('close', false);
 };
 
 const applyFilters = () => {
+  if (!draftFilters.value) return;
+
+  emit('apply-filters', cloneFilters(draftFilters.value)!);
   emit('close', false);
-  emit('apply-filters', props.filterSelected);
 };
 </script>
 
 <template>
   <Dialog
-    :visible="props.showFilter"
+    v-model:visible="dialogVisible"
     modal
     header="Filtros"
     class="filter-dialog"
+    style="--app-dialog-width: 40rem; --app-dialog-height: 30rem"
     :closable="false"
-    @update:visible="close"
   >
-    <div v-if="props.filterSelected" class="filter-section">
+    <div v-if="draftFilters" class="filter-section">
       <h4>Período</h4>
-      <SelectButton v-model="props.filterSelected.period" :options="filtersOptions.options" optionLabel="label" class="mt-2" />
+      <SelectButton v-model="draftFilters.period" :options="filtersOptions.options" optionLabel="label" class="mt-2" />
 
-      <div v-if="props.filterSelected.period && props.filterSelected.period.value === 3" class="mt-3">
+      <div v-if="draftFilters.period && draftFilters.period.value === 3" class="mt-3">
         <div class="filter-options">
           <div class="flex items-center gap-2">
-            <RadioButton v-model="props.filterSelected.radioTypeFilterPeriod" input-id="forMounth" name="mounth" value="mounth" />
+            <RadioButton v-model="draftFilters.radioTypeFilterPeriod" input-id="forMounth" name="period-type" value="mounth" />
             <label for="forMounth">Por mês</label>
           </div>
           <div class="flex items-center gap-2">
-            <RadioButton v-model="props.filterSelected.radioTypeFilterPeriod" input-id="forDate" name="date" value="date" />
+            <RadioButton v-model="draftFilters.radioTypeFilterPeriod" input-id="forDate" name="period-type" value="date" />
             <label for="forDate">Por data</label>
           </div>
         </div>
 
-        <div v-if="props.filterSelected.radioTypeFilterPeriod === 'mounth'" class="mt-3">
+        <div v-if="draftFilters.radioTypeFilterPeriod === 'mounth'" class="mt-3">
           <h4>Mês</h4>
           <Select
-            v-model="props.filterSelected.month"
+            v-model="draftFilters.month"
             :options="filtersOptions.mounths"
             filter
             optionLabel="label"
@@ -69,9 +97,9 @@ const applyFilters = () => {
           />
         </div>
 
-        <div v-if="props.filterSelected.radioTypeFilterPeriod === 'date'" class="mt-3">
+        <div v-if="draftFilters.radioTypeFilterPeriod === 'date'" class="mt-3">
           <h4>Data</h4>
-          <DatePicker v-model="props.filterSelected.datePeriod" selectionMode="range" :manualInput="false" class="w-full mt-2" date-format="dd/mm/yyyy" />
+          <DatePicker v-model="draftFilters.datePeriod" selectionMode="range" :manualInput="false" class="w-full mt-2" date-format="dd/mm/yy" />
         </div>
       </div>
     </div>
@@ -81,17 +109,17 @@ const applyFilters = () => {
     <div class="filter-section">
       <h4>Status</h4>
 
-      <div v-if="props.filterSelected" class="filter-options">
+      <div v-if="draftFilters" class="filter-options">
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.statusFilter" input-id="all-status" name="todos" value="TO" />
+          <RadioButton v-model="draftFilters.statusFilter" input-id="all-status" name="status" value="TO" />
           <label for="all-status">Todos</label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.statusFilter" input-id="pendentes" name="pendentes" value="PE" />
+          <RadioButton v-model="draftFilters.statusFilter" input-id="pendentes" name="status" value="PE" />
           <label for="pendentes">Pendentes</label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.statusFilter" input-id="pagos" name="pagos" value="PA" />
+          <RadioButton v-model="draftFilters.statusFilter" input-id="pagos" name="status" value="PA" />
           <label for="pagos">Pagos</label>
         </div>
       </div>
@@ -102,17 +130,17 @@ const applyFilters = () => {
     <div class="filter-section">
       <h4>Tipo</h4>
 
-      <div v-if="props.filterSelected" class="filter-options">
+      <div v-if="draftFilters" class="filter-options">
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.type" input-id="all-type" name="todos" value="TO" />
+          <RadioButton v-model="draftFilters.type" input-id="all-type" name="type" value="TO" />
           <label for="all-type">Todos</label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.type" input-id="despesa" name="despesa" value="D" />
+          <RadioButton v-model="draftFilters.type" input-id="despesa" name="type" value="D" />
           <label for="despesa">Despesas</label>
         </div>
         <div class="flex items-center gap-2">
-          <RadioButton v-model="props.filterSelected.type" input-id="receita" name="receita" value="R" />
+          <RadioButton v-model="draftFilters.type" input-id="receita" name="type" value="R" />
           <label for="receita">Receitas</label>
         </div>
       </div>

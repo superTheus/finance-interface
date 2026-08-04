@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
-import type { BankAccounts, Bills, BillsRequest, FilterBill, PaymentsForms, ResumeBills } from '@/types/types';
-import { ref, watch } from 'vue';
+import type { BankAccounts, Bills, BillsRequest, Categories, FilterBill, PaymentsForms, ResumeBills } from '@/types/types';
+import { computed, ref, watch } from 'vue';
 import moment from 'moment';
 import { Utils } from '@/services/utils';
 import ModalFilters from '@/components/ModalFilters.vue';
@@ -18,18 +18,23 @@ const toast = useToast();
 const api = new Api();
 const utils = new Utils();
 const bills = ref<Bills[]>([]);
-const page = ref(1);
+const page = ref(0);
 const total = ref(0);
+const rowsPerPage = 5;
 const showFilter = ref(false);
 const showDialogPayment = ref(false);
 const showDialogForm = ref(false);
 const isEditMode = ref(false);
 const forms = ref<PaymentsForms[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
+const categories = ref<Categories[]>([]);
+const categoryFilter = ref<number | null>(null);
 const accountSelected = ref<Bills>();
 const accountToEdit = ref<Bills | null>(null);
 const accountToPay = ref<Bills | null>(null);
 const saving = ref(false);
+const loadingBills = ref(false);
+let latestBillsRequest = 0;
 
 const formAccount = ref<{
   tipo: "D" | "R",
@@ -50,6 +55,7 @@ const formAccount = ref<{
   frequencia?: number;
   formaPagamento?: PaymentsForms;
   bankAccount?: BankAccounts;
+  category?: Categories;
   valorPago: number;
   dataPagamento?: Date;
 }>({
@@ -72,14 +78,12 @@ const filter = ref<BillsRequest>({
   filter: {
     id_usuario: user.user?.id || 0,
     deletado: 'N',
-    vencimento: {
-      'BETWEEN': [
-        moment().startOf('month').format('YYYY-MM-DD'),
-        moment().endOf('month').format('YYYY-MM-DD')
-      ]
-    }
   },
-  limit: 5,
+  date_ranger: {
+    start_date: moment().startOf('month').format('YYYY-MM-DD'),
+    end_date: moment().endOf('month').format('YYYY-MM-DD'),
+  },
+  limit: rowsPerPage,
   offset: 0,
   order: {
     cols: ["vencimento"],
@@ -123,6 +127,10 @@ const items = ref<{
   items: MenuItem[];
 }[]>();
 
+const availableCategories = computed(() => categories.value.filter((category) =>
+  category.ativo === 'S' && [formAccount.value.tipo, 'A'].includes(category.tipo)
+));
+
 const formPayment = ref<{
   formaPagamento: PaymentsForms;
   bankAccount: BankAccounts;
@@ -154,29 +162,55 @@ const ChipsFilter = ref<{
   }
 }]);
 
-function loadBills() {
-  api.findBills({
-    filter: {
-      ...filter.value.filter,
-      vencimento: filter.value.date_ranger ? {
-        'BETWEEN': [
-          filter.value.date_ranger.start_date,
-          filter.value.date_ranger.end_date
-        ]
-      } : {
-        'BETWEEN': [
-          moment().startOf('month').format('YYYY-MM-DD'),
-          moment().endOf('month').format('YYYY-MM-DD')
-        ]
-      }
-    },
-    limit: filter.value.limit,
-    offset: filter.value.offset,
-    order: filter.value.order,
-  }).then((data) => {
-    total.value = data.total;
-    bills.value = data.data;
-  });
+async function loadBills(): Promise<void> {
+  const requestId = ++latestBillsRequest;
+  const requestedOffset = filter.value.offset || 0;
+  const dateRange = filter.value.date_ranger || {
+    start_date: moment().startOf('month').format('YYYY-MM-DD'),
+    end_date: moment().endOf('month').format('YYYY-MM-DD'),
+  };
+
+  loadingBills.value = true;
+
+  try {
+    const response = await api.findBills({
+      filter: {
+        ...filter.value.filter,
+        vencimento: {
+          BETWEEN: [dateRange.start_date, dateRange.end_date],
+        },
+      },
+      limit: filter.value.limit,
+      offset: requestedOffset,
+      order: filter.value.order,
+    });
+
+    if (requestId !== latestBillsRequest) return;
+
+    const rows = Array.isArray(response.data) ? response.data : [];
+    const recordsTotal = Number(response.total) || 0;
+
+    if (!rows.length && recordsTotal > 0 && requestedOffset > 0) {
+      page.value = 0;
+      filter.value.offset = 0;
+      await loadBills();
+      return;
+    }
+
+    total.value = recordsTotal;
+    bills.value = rows;
+  } catch (error) {
+    if (requestId !== latestBillsRequest) return;
+
+    toast.add({
+      severity: 'error',
+      summary: 'Erro ao carregar contas',
+      detail: error instanceof Error ? error.message : 'Não foi possível carregar a listagem.',
+      life: 4000,
+    });
+  } finally {
+    if (requestId === latestBillsRequest) loadingBills.value = false;
+  }
 }
 
 function loadResumes() {
@@ -214,10 +248,12 @@ function loadAllData() {
       filter: {
         id_usuario: user.user?.id || 0
       }
-    })
-  ]).then(([payments, accounts]) => {
+    }),
+    api.findCategories({ filter: { ativo: 'S' }, limit: 100 })
+  ]).then(([payments, accounts, categoryResponse]) => {
     forms.value = payments;
     bankAccounts.value = accounts.data;
+    categories.value = categoryResponse.data;
 
     formPayment.value.formaPagamento = payments[0];
     formPayment.value.bankAccount = accounts.data.find((account) => account.principal === 'S') || accounts.data[0];
@@ -234,6 +270,7 @@ const createBill = () => {
     vencimento: moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
     descricao: formAccount.value.descricao || '',
     status: formAccount.value.status,
+    id_categoria: formAccount.value.category?.id,
     data_pagamento: moment(formAccount.value.data_pagamento).format('YYYY-MM-DD'),
   }
 
@@ -330,6 +367,7 @@ const updateBill = () => {
   bill.valor = formAccount.value.valor;
   bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD');
   bill.descricao = formAccount.value.descricao || '';
+  bill.id_categoria = formAccount.value.category?.id;
 
   api.updateBills(currentAccount.id || 0, bill).then(() => {
     showDialogPayment.value = false;
@@ -339,7 +377,7 @@ const updateBill = () => {
   }).finally(() => { saving.value = false; });
 }
 
-const deleteBill = ({ success, error }: { success?: Function, error?: Function }) => {
+const deleteBill = ({ success, error }: { success?: () => void, error?: () => void }) => {
   api.updateBills(accountSelected.value?.id || 0, {
     deletado: 'S'
   }).then(() => {
@@ -364,7 +402,10 @@ const applyFilter = (filterSelected: FilterBill) => {
   const currentFilters = { ...filter.value }
   ChipsFilter.value = [];
 
-  const addChip = (label: string, data: FilterBill, key: string, resetValue: any) => {
+  page.value = 0;
+  currentFilters.offset = 0;
+
+  const addChip = (label: string, data: FilterBill, key: string, resetValue: unknown) => {
     ChipsFilter.value.push({
       label,
       data,
@@ -431,9 +472,19 @@ const applyFilter = (filterSelected: FilterBill) => {
   };
 
   filterOptions.value = filterSelected;
+  showFilter.value = false;
+  loadBills();
+  loadResumes();
 }
 
+const changePage = (event: { first: number }) => {
+  page.value = event.first;
+  filter.value.offset = event.first;
+  loadBills();
+};
+
 const confirmDelete = (bill: Bills) => {
+  accountSelected.value = bill;
   confirm.require({
     message: 'Realmente deseja deletar a conta ?',
     header: 'Atenção',
@@ -536,13 +587,13 @@ watch(bills, () => {
           formAccount.value.valor = bill.valor;
           formAccount.value.vencimento = moment(bill.vencimento as string).toDate();
           formAccount.value.descricao = bill.descricao || '';
+          formAccount.value.category = categories.value.find((category) => category.id === bill.id_categoria);
         }
       },
       {
         label: 'Excluir',
         icon: 'pi pi-trash',
         command: () => {
-          accountSelected.value = bill;
           confirmDelete(bill);
         }
       }
@@ -555,14 +606,21 @@ watch(bills, () => {
   });
 });
 
-watch(page, () => {
-  filter.value.offset = page.value;
+watch(categoryFilter, (categoryId) => {
+  page.value = 0;
+  filter.value.offset = 0;
+  if (categoryId) {
+    filter.value.filter = { ...filter.value.filter, id_categoria: categoryId };
+  } else if (filter.value.filter) {
+    delete filter.value.filter.id_categoria;
+  }
   loadBills();
 });
 
-watch(filter, () => {
-  loadResumes();
-  loadBills();
+watch(() => formAccount.value.tipo, () => {
+  if (formAccount.value.category && !availableCategories.value.some((category) => category.id === formAccount.value.category?.id)) {
+    formAccount.value.category = undefined;
+  }
 });
 
 watch(showDialogPayment, (newValue) => {
@@ -583,17 +641,19 @@ loadAllData();
 
 <template>
   <section class="bills-page app-page">
-      <div class="list-header">
-        <div>
-          <p class="eyebrow">Gestão financeira</p>
-          <h2>Contas</h2>
-          <span>Cadastre, acompanhe e liquide receitas e despesas.</span>
-        </div>
+    <div class="list-header">
+      <div>
+        <p class="eyebrow">Gestão financeira</p>
+        <h2>Contas</h2>
+        <span>Cadastre, acompanhe e liquide receitas e despesas.</span>
+      </div>
       <div class="page-actions">
-        <Button label="Filtrar" icon="pi pi-filter" class="p-button-secondary" @click="showFilter = true" />
+        <Button label="Filtrar" icon="pi pi-filter" class="p-button-secondary p-button-sm" @click="showFilter = true" />
         <Button label="Nova conta" icon="pi pi-plus" class="p-button-sm" @click="showDialogForm = true" />
       </div>
-      </div>
+    </div>
+
+    <div class="bill-filter-bar orbit-panel">
       <div class="filter-chips">
         <div v-for="item in ChipsFilter" :key="item.label">
           <Chip :label="item.label" removable>
@@ -603,24 +663,34 @@ loadAllData();
           </Chip>
         </div>
       </div>
+      <Select v-model="categoryFilter" :options="categories" optionLabel="nome" optionValue="id"
+        showClear placeholder="Filtrar por categoria" class="category-quick-filter" />
+    </div>
 
-      <div class="card-resume-container">
-        <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
-          class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
-          class="card-resume card-resume_green" />
-        <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Falta pagar" icon="pi pi-clock"
-          class="card-resume card-resume_danger" />
-        <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Falta receber" icon="pi pi-hourglass"
-          class="card-resume card-resume_green" />
-      </div>
+    <div class="card-resume-container">
+      <ValuesTotals :value="resumeBills.saldo" label="Previsão de saldo" icon="pi pi-wallet"
+        class="card-resume" :class="resumeBills.saldo >= 0 ? 'card-resume_green' : 'card-resume_danger'" />
+      <ValuesTotals :value="resumeBills.totalPagar" label="Total de despesas" icon="pi pi-arrow-up-right"
+        class="card-resume card-resume_danger" />
+      <ValuesTotals :value="resumeBills.totalReceber" label="Total de receitas" icon="pi pi-arrow-down-left"
+        class="card-resume card-resume_green" />
+      <ValuesTotals :value="resumeBills.totalFaltaPagar" label="Falta pagar" icon="pi pi-clock"
+        class="card-resume card-resume_danger" />
+      <ValuesTotals :value="resumeBills.totalFaltaReceber" label="Falta receber" icon="pi pi-hourglass"
+        class="card-resume card-resume_green" />
+    </div>
 
-      <div v-if="total" class="resume mt-3">
-        <h3> {{ total }} Contas encontradas </h3>
-      </div>
+    <div v-if="!loadingBills" class="resume">
+      <h3>{{ total }} {{ total === 1 ? 'conta encontrada' : 'contas encontradas' }}</h3>
+    </div>
 
-      <div class="responsive-table">
-        <DataTable :value="bills" stripedRows tableStyle="min-width: 50rem" sortMode="multiple">
+    <div v-if="loadingBills" class="bill-loading orbit-panel" aria-live="polite">
+      <ProgressSpinner strokeWidth="4" />
+      <span>Carregando contas...</span>
+    </div>
+
+    <div v-else-if="bills.length" class="responsive-table">
+      <DataTable :value="bills" stripedRows tableStyle="min-width: 50rem" sortMode="multiple">
         <Column field="titulo" header="Título">
           <template #body="slotProps">
             {{ slotProps.data.titulo }}
@@ -632,6 +702,14 @@ loadAllData();
         <Column field="valor" header="Valor">
           <template #body="slotProps">
             <span>{{ utils.formatCurrency(slotProps.data.valor) }}</span>
+          </template>
+        </Column>
+        <Column field="id_categoria" header="Categoria">
+          <template #body="slotProps">
+            <Tag v-if="categories.find(category => category.id === slotProps.data.id_categoria)"
+              :value="categories.find(category => category.id === slotProps.data.id_categoria)?.nome"
+              severity="secondary" />
+            <Tag v-else value="Sem categoria" severity="secondary" />
           </template>
         </Column>
         <Column field="status" header="Situação">
@@ -655,10 +733,11 @@ loadAllData();
           </template>
         </Column>
       </DataTable>
-      </div>
-      <div v-if="!bills.length" class="empty-state">Nenhuma conta encontrada para os filtros selecionados.</div>
+    </div>
+    <div v-else class="empty-state orbit-panel">Nenhuma conta encontrada para os filtros selecionados.</div>
 
-      <Paginator v-model:first="page" :rows="filter.limit" :totalRecords="total"></Paginator>
+    <Paginator v-if="!loadingBills && total > rowsPerPage" :first="page" :rows="rowsPerPage"
+      :totalRecords="total" @page="changePage" />
   </section>
 
   <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter">
@@ -728,6 +807,12 @@ loadAllData();
                   { name: 'Receita', value: 'R' },
                 ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
                 <label for="titulo">Tipo de Conta</label>
+              </FloatLabel>
+
+              <FloatLabel class="mt-4 w-full full">
+                <Select v-model="formAccount.category" :options="availableCategories" optionLabel="nome"
+                  showClear placeholder="Selecione uma categoria" class="w-full" />
+                <label>Categoria (opcional)</label>
               </FloatLabel>
 
               <FloatLabel class="mt-4 w-full full">
@@ -865,6 +950,12 @@ loadAllData();
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full full">
+            <Select v-model="formAccount.category" :options="availableCategories" optionLabel="nome"
+              showClear placeholder="Selecione uma categoria" class="w-full" />
+            <label>Categoria (opcional)</label>
+          </FloatLabel>
+
+          <FloatLabel class="mt-4 w-full full">
             <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
             <label for="titulo">Título</label>
           </FloatLabel>
@@ -897,11 +988,12 @@ loadAllData();
 <style scoped lang="scss">
 .bills-page {
   align-content: start;
+  gap: 0.75rem;
 }
 
 .card-resume-container {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
@@ -911,10 +1003,42 @@ loadAllData();
   gap: 0.5rem;
 }
 
+.bill-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.category-quick-filter {
+  width: min(100%, 18rem);
+  flex: 0 1 18rem;
+}
+
 .resume h3 {
   color: var(--app-text-muted);
   font-size: 0.95rem;
   font-weight: 700;
+}
+
+.bill-loading {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.65rem;
+  min-height: 10rem;
+  color: var(--app-text-muted);
+}
+
+.bill-loading :deep(.p-progressspinner) {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.empty-state {
+  min-height: 10rem;
 }
 
 .bill-description {
@@ -929,12 +1053,28 @@ loadAllData();
 }
 
 @media (max-width: 768px) {
+  .bill-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-quick-filter {
+    width: 100%;
+    flex-basis: auto;
+  }
+
   .card-resume-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .resume h3 {
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .card-resume-container {
+    grid-template-columns: 1fr;
   }
 }
 </style>

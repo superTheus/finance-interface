@@ -19,7 +19,16 @@ export default defineConfig({
   },
   server: {
     host: true,
-    allowedHosts: true
+    allowedHosts: true,
+    proxy: {
+      '/finance-api': {
+        target: 'http://127.0.0.1',
+        headers: {
+          host: 'projetos.local',
+        },
+        rewrite: (path) => path.replace(/^\/finance-api/, '/finance-app/back'),
+      },
+    },
   },
   build: {
     rollupOptions: {

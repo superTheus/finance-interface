@@ -6,6 +6,7 @@ import Carousel from 'primevue/carousel';
 import Chart from 'primevue/chart';
 import Checkbox from 'primevue/checkbox';
 import Chip from 'primevue/chip';
+import ColorPicker from 'primevue/colorpicker';
 import Column from 'primevue/column';
 import ConfirmationService from 'primevue/confirmationservice';
 import ConfirmDialog from 'primevue/confirmdialog';
@@ -22,8 +23,10 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputMask from 'primevue/inputmask';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
+import Message from 'primevue/message';
 import Paginator from 'primevue/paginator';
 import RadioButton from 'primevue/radiobutton';
+import ProgressSpinner from 'primevue/progressspinner';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import SplitButton from 'primevue/splitbutton';
@@ -34,6 +37,7 @@ import StepPanel from 'primevue/steppanel';
 import StepPanels from 'primevue/steppanels';
 import Stepper from 'primevue/stepper';
 import Textarea from 'primevue/textarea';
+import Tag from 'primevue/tag';
 import TieredMenu from 'primevue/tieredmenu';
 import ToastService from 'primevue/toastservice';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -53,7 +57,8 @@ const components = [
   Button, InputText, InputGroup, InputGroupAddon, DataTable, Column, Card, Badge,
   DatePicker, Drawer, TieredMenu, Dialog, Divider, ToggleSwitch, SelectButton,
   Select, RadioButton, SplitButton, Paginator, Chip, Carousel, Chart, InputMask, InputNumber,
-  Checkbox, Stepper, StepPanels, StepList, StepItem, Step, StepPanel, FloatLabel, Textarea, ConfirmDialog, Divider
+  Checkbox, Stepper, StepPanels, StepList, StepItem, Step, StepPanel, FloatLabel, Textarea, ConfirmDialog
+  , ColorPicker, Message, ProgressSpinner, Tag
 ];
 const services = [DialogService, ToastService, ConfirmationService];
 const directives = [{
