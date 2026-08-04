@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, type PropType } from 'vue';
-import type { FilterBill } from '@/types/types';
+import type { Categories, FilterBill } from '@/types/types';
 import { mounths } from '@/constants/constants';
 
 const filtersOptions = ref({
@@ -15,6 +15,10 @@ const filtersOptions = ref({
 const props = defineProps({
   showFilter: Boolean,
   filterSelected: Object as PropType<FilterBill>,
+  categories: {
+    type: Array as PropType<Categories[]>,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits<{
@@ -27,6 +31,8 @@ function cloneFilters(filters?: FilterBill): FilterBill | null {
 
   return {
     ...filters,
+    search: filters.search ?? '',
+    categoryId: filters.categoryId ?? null,
     period: { ...filters.period },
     month: { ...filters.month },
     datePeriod: filters.datePeriod.map((date) => new Date(date)),
@@ -63,9 +69,41 @@ const applyFilters = () => {
     modal
     header="Filtros"
     class="filter-dialog"
-    style="--app-dialog-width: 40rem; --app-dialog-height: 30rem"
+    style="--app-dialog-width: 40rem; --app-dialog-height: min(42rem, 90vh)"
     :closable="false"
   >
+    <div v-if="draftFilters" class="filter-section">
+      <h4>Busca</h4>
+      <InputGroup class="mt-2">
+        <InputGroupAddon><i class="pi pi-search" /></InputGroupAddon>
+        <InputText
+          v-model="draftFilters.search"
+          class="w-full"
+          placeholder="Buscar por título ou descrição"
+          @keyup.enter="applyFilters"
+        />
+      </InputGroup>
+    </div>
+
+    <Divider />
+
+    <div v-if="draftFilters" class="filter-section">
+      <h4>Categoria</h4>
+      <Select
+        v-model="draftFilters.categoryId"
+        :options="categories"
+        optionLabel="nome"
+        optionValue="id"
+        filter
+        showClear
+        class="w-full mt-2"
+        placeholder="Todas as categorias"
+        empty-filter-message="Nenhuma categoria encontrada"
+      />
+    </div>
+
+    <Divider />
+
     <div v-if="draftFilters" class="filter-section">
       <h4>Período</h4>
       <SelectButton v-model="draftFilters.period" :options="filtersOptions.options" optionLabel="label" class="mt-2" />

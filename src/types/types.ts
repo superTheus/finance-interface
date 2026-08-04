@@ -76,7 +76,8 @@ export type BillsForm = {
 export type PartialBills = Partial<Bills>;
 
 export interface BillsRequest extends request {
-  filter?: PartialBills
+  filter?: PartialBills,
+  search?: string
 }
 
 export type ResumeBills = {
@@ -158,6 +159,7 @@ export type FilterBill = {
   radioTypeFilterPeriod: 'mounth' | 'date',
   statusFilter: 'TO' | 'PE' | 'PA',
   type: 'TO' | 'D' | 'R',
+  search: string,
   categoryId?: number | null,
   datePeriod: Date[]
 }

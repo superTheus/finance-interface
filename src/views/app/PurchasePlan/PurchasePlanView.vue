@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Api } from '@/services/api';
 import { Utils } from '@/services/utils';
-import { isSafePurchaseUrl, isValidPriceRange } from '@/services/purchasePlanning';
+import { calculatePurchaseOptionRange, isSafePurchaseUrl, isValidPriceRange } from '@/services/purchasePlanning';
 import type {
   BankAccounts, Categories, FinancialSettings, PaymentsForms, PurchaseItem,
   PurchaseOption, PurchasePlanSummary, PurchasePriority, PurchaseProjection,
@@ -125,6 +125,9 @@ const blankOption = (): OptionForm => ({
   disponivel: 'S',
 });
 const optionForm = ref<OptionForm>(blankOption());
+const initialOptionForm = ref<OptionForm>(blankOption());
+const initialOptions = ref<OptionForm[]>([]);
+const editingInitialOptionIndex = ref<number | null>(null);
 
 const buyForm = ref({
   data_compra: new Date(),
@@ -156,6 +159,19 @@ const filteredItems = computed(() => items.value.filter((item) => {
     && (!priorityFilter.value || item.prioridade === priorityFilter.value)
     && (!statusFilter.value || item.status === statusFilter.value);
 }));
+const initialPriceRange = computed(() => calculatePurchaseOptionRange(initialOptions.value));
+const hasInitialOptionDraft = computed(() => {
+  const option = initialOptionForm.value;
+  return Boolean(
+    option.nome_loja.trim()
+    || option.descricao.trim()
+    || option.valor > 0
+    || option.frete !== null && option.frete !== undefined
+    || option.link !== 'https://'
+    || option.observacao.trim()
+    || option.disponivel === 'N'
+  );
+});
 
 function errorMessage(error: unknown): string {
   if (typeof error === 'object' && error && 'message' in error) {
@@ -200,6 +216,8 @@ async function loadAll(): Promise<void> {
 function openCreate(): void {
   editingItemId.value = null;
   itemForm.value = blankItem();
+  initialOptions.value = [];
+  resetInitialOptionForm();
   itemDialog.value = true;
 }
 
@@ -217,20 +235,89 @@ function openEdit(item: PurchaseItem): void {
     observacoes: item.observacoes || '',
     status: item.status,
   };
+  initialOptions.value = [];
+  resetInitialOptionForm();
   itemDialog.value = true;
 }
 
+function resetInitialOptionForm(): void {
+  editingInitialOptionIndex.value = null;
+  initialOptionForm.value = blankOption();
+}
+
+function optionTotal(option: Pick<OptionForm, 'valor' | 'frete'>): number {
+  return option.valor + (option.frete || 0);
+}
+
+function addInitialOption(): boolean {
+  const option = initialOptionForm.value;
+  if (!option.nome_loja.trim() || option.valor <= 0 || !isSafePurchaseUrl(option.link)) {
+    toast.add({ severity: 'warn', summary: 'Revise a opção', detail: 'Informe loja, valor e URL HTTP/HTTPS válida.', life: 3500 });
+    return false;
+  }
+
+  const normalized: OptionForm = {
+    ...option,
+    nome_loja: option.nome_loja.trim(),
+    descricao: option.descricao.trim(),
+    link: option.link.trim(),
+    observacao: option.observacao.trim(),
+    data_pesquisa: new Date(option.data_pesquisa),
+  };
+  if (editingInitialOptionIndex.value === null) {
+    initialOptions.value.push(normalized);
+  } else {
+    initialOptions.value.splice(editingInitialOptionIndex.value, 1, normalized);
+  }
+  resetInitialOptionForm();
+  return true;
+}
+
+function editInitialOption(index: number): void {
+  const option = initialOptions.value[index];
+  editingInitialOptionIndex.value = index;
+  initialOptionForm.value = {
+    ...option,
+    data_pesquisa: new Date(option.data_pesquisa),
+  };
+}
+
+function removeInitialOption(index: number): void {
+  initialOptions.value.splice(index, 1);
+  if (editingInitialOptionIndex.value === index) {
+    resetInitialOptionForm();
+  } else if (editingInitialOptionIndex.value !== null && editingInitialOptionIndex.value > index) {
+    editingInitialOptionIndex.value -= 1;
+  }
+}
+
 async function saveItem(): Promise<void> {
-  if (!itemForm.value.nome.trim() || !isValidPriceRange(itemForm.value.valor_minimo, itemForm.value.valor_maximo)) {
-    toast.add({ severity: 'warn', summary: 'Revise os campos', detail: 'Nome e valor mínimo maior que zero são obrigatórios.', life: 3500 });
+  if (!editingItemId.value && hasInitialOptionDraft.value && !addInitialOption()) {
+    return;
+  }
+  const calculatedRange = editingItemId.value ? null : initialPriceRange.value;
+  if (!itemForm.value.nome.trim()) {
+    toast.add({ severity: 'warn', summary: 'Revise os campos', detail: 'O nome do item é obrigatório.', life: 3500 });
+    return;
+  }
+  if (!calculatedRange && !isValidPriceRange(itemForm.value.valor_minimo, itemForm.value.valor_maximo)) {
+    toast.add({ severity: 'warn', summary: 'Revise os campos', detail: 'Adicione uma opção disponível ou informe um valor mínimo maior que zero.', life: 3500 });
     return;
   }
   saving.value = true;
   const payload: Partial<PurchaseItem> = {
     ...itemForm.value,
+    valor_minimo: calculatedRange?.minimum ?? itemForm.value.valor_minimo,
+    valor_maximo: calculatedRange?.maximum ?? itemForm.value.valor_maximo,
     data_desejada: itemForm.value.data_desejada
       ? moment(itemForm.value.data_desejada).format('YYYY-MM-DD')
       : null,
+    opcoes: editingItemId.value
+      ? undefined
+      : initialOptions.value.map((option) => ({
+        ...option,
+        data_pesquisa: moment(option.data_pesquisa).format('YYYY-MM-DD'),
+      })),
   };
   try {
     if (editingItemId.value) {
@@ -503,11 +590,11 @@ onMounted(loadAll);
             <Column header="Ações">
               <template #body="{ data }">
                 <div class="table-actions">
-                  <Button icon="pi pi-eye" text rounded aria-label="Detalhes" @click="openDetails(data)" />
-                  <Button v-if="data.comprado !== 'S'" icon="pi pi-pencil" text rounded aria-label="Editar" @click="openEdit(data)" />
+                  <Button v-tooltip.top="'Ver detalhes'" icon="pi pi-eye" text rounded aria-label="Ver detalhes" @click="openDetails(data)" />
+                  <Button v-if="data.comprado !== 'S'" v-tooltip.top="'Editar item'" icon="pi pi-pencil" text rounded aria-label="Editar item" @click="openEdit(data)" />
                   <Button v-if="data.comprado !== 'S'" icon="pi pi-check-circle" text rounded severity="success"
-                    aria-label="Marcar como comprado" @click="openBuy(data)" />
-                  <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Excluir" @click="confirmDelete(data)" />
+                    v-tooltip.top="'Marcar como comprado'" aria-label="Marcar como comprado" @click="openBuy(data)" />
+                  <Button v-tooltip.top="'Excluir item'" icon="pi pi-trash" text rounded severity="danger" aria-label="Excluir item" @click="confirmDelete(data)" />
                 </div>
               </template>
             </Column>
@@ -520,10 +607,51 @@ onMounted(loadAll);
         <div class="full"><label class="label">Descrição</label><Textarea v-model="itemForm.descricao" class="w-full" rows="3" /></div>
         <div><label class="label">Classificação *</label><Select v-model="itemForm.classificacao" :options="classifications" class="w-full" /></div>
         <div><label class="label">Prioridade *</label><Select v-model="itemForm.prioridade" :options="priorities" optionLabel="label" optionValue="value" class="w-full" /></div>
-        <div><label class="label">Valor mínimo *</label><InputNumber v-model="itemForm.valor_minimo" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
-        <div><label class="label">Valor máximo</label><InputNumber v-model="itemForm.valor_maximo" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
+        <template v-if="editingItemId || !initialPriceRange">
+          <div><label class="label">Valor mínimo *</label><InputNumber v-model="itemForm.valor_minimo" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
+          <div><label class="label">Valor máximo</label><InputNumber v-model="itemForm.valor_maximo" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
+        </template>
+        <section v-if="!editingItemId" class="initial-options full">
+          <div class="initial-options-header">
+            <div>
+              <h4>Opções de compra</h4>
+              <small>Adicione as ofertas pesquisadas. Frete + valor definem automaticamente a faixa do item.</small>
+            </div>
+            <Tag v-if="initialPriceRange" severity="success" :value="`${utils.formatCurrency(initialPriceRange.minimum)} – ${utils.formatCurrency(initialPriceRange.maximum)}`" />
+          </div>
+          <div class="option-editor">
+            <div><label class="label">Loja *</label><InputText v-model="initialOptionForm.nome_loja" class="w-full" /></div>
+            <div><label class="label">Nome da opção</label><InputText v-model="initialOptionForm.descricao" class="w-full" /></div>
+            <div class="full"><label class="label">Link *</label><InputText v-model="initialOptionForm.link" class="w-full" /></div>
+            <div><label class="label">Valor *</label><InputNumber v-model="initialOptionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
+            <div><label class="label">Frete</label><InputNumber v-model="initialOptionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0" /></div>
+            <div><label class="label" for="data-pesquisa-inicial">Data da pesquisa</label><DatePicker inputId="data-pesquisa-inicial" v-model="initialOptionForm.data_pesquisa" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
+            <div class="option-availability"><label class="label">Disponível</label><ToggleSwitch v-model="initialOptionForm.disponivel" trueValue="S" falseValue="N" /></div>
+            <div class="full"><label class="label">Observação</label><Textarea v-model="initialOptionForm.observacao" class="w-full" rows="2" /></div>
+            <div class="full option-editor-actions">
+              <Button v-if="editingInitialOptionIndex !== null" type="button" label="Cancelar edição" severity="secondary" text @click="resetInitialOptionForm" />
+              <Button type="button" :label="editingInitialOptionIndex === null ? 'Adicionar opção' : 'Atualizar opção'" icon="pi pi-plus" @click="addInitialOption" />
+            </div>
+          </div>
+          <div v-if="initialOptions.length" class="initial-option-list">
+            <div v-for="(option, index) in initialOptions" :key="`${option.nome_loja}-${index}`" class="initial-option-row">
+              <div>
+                <strong>{{ option.nome_loja }}</strong>
+                <small>{{ option.descricao || option.link }}</small>
+              </div>
+              <Tag :value="option.disponivel === 'S' ? 'Disponível' : 'Indisponível'" :severity="option.disponivel === 'S' ? 'info' : 'secondary'" />
+              <strong>{{ utils.formatCurrency(optionTotal(option)) }}</strong>
+              <div class="table-actions">
+                <Button v-tooltip.top="'Editar opção'" type="button" icon="pi pi-pencil" text rounded aria-label="Editar opção" @click="editInitialOption(index)" />
+                <Button v-tooltip.top="'Remover opção'" type="button" icon="pi pi-trash" text rounded severity="danger" aria-label="Remover opção" @click="removeInitialOption(index)" />
+              </div>
+            </div>
+          </div>
+          <Message v-else severity="secondary" :closable="false">Nenhuma opção adicionada. Nesse caso, informe o valor mínimo manual acima.</Message>
+          <Message v-if="initialOptions.length && !initialPriceRange" severity="warn" :closable="false">Não há opção disponível para calcular a faixa. Informe o valor mínimo manual acima.</Message>
+        </section>
         <div><label class="label">Valor de referência</label><InputNumber v-model="itemForm.valor_referencia" mode="currency" currency="BRL" locale="pt-BR" class="w-full" /></div>
-        <div><label class="label">Data desejada</label><DatePicker v-model="itemForm.data_desejada" dateFormat="dd/mm/yy" class="w-full" showIcon /></div>
+        <div><label class="label" for="data-desejada">Data desejada</label><DatePicker inputId="data-desejada" v-model="itemForm.data_desejada" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
         <div v-if="editingItemId"><label class="label">Status</label><Select v-model="itemForm.status" :options="statuses" optionLabel="label" optionValue="value" class="w-full" /></div>
         <div class="full"><label class="label">Observações</label><Textarea v-model="itemForm.observacoes" class="w-full" rows="3" /></div>
       </form>
@@ -566,9 +694,9 @@ onMounted(loadAll);
             <Column header="Link"><template #body="{ data }"><a :href="data.link" target="_blank" rel="noopener noreferrer" class="simple-link">Abrir <i class="pi pi-external-link"></i></a></template></Column>
             <Column header="Ações">
               <template #body="{ data }"><div class="table-actions">
-                <Button icon="pi pi-check" text rounded aria-label="Selecionar" @click="selectOption(data)" />
-                <Button icon="pi pi-pencil" text rounded aria-label="Editar" @click="openOption(data)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Excluir" @click="removeOption(data)" />
+                <Button v-tooltip.top="'Selecionar opção'" icon="pi pi-check" text rounded aria-label="Selecionar opção" @click="selectOption(data)" />
+                <Button v-tooltip.top="'Editar opção'" icon="pi pi-pencil" text rounded aria-label="Editar opção" @click="openOption(data)" />
+                <Button v-tooltip.top="'Excluir opção'" icon="pi pi-trash" text rounded severity="danger" aria-label="Excluir opção" @click="removeOption(data)" />
               </div></template>
             </Column>
           </DataTable>
@@ -600,7 +728,7 @@ onMounted(loadAll);
         <div class="full"><label class="label">Link *</label><InputText v-model="optionForm.link" class="w-full" /></div>
         <div><label class="label">Valor *</label><InputNumber v-model="optionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
         <div><label class="label">Frete</label><InputNumber v-model="optionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0" /></div>
-        <div><label class="label">Data da pesquisa</label><DatePicker v-model="optionForm.data_pesquisa" dateFormat="dd/mm/yy" class="w-full" /></div>
+        <div><label class="label" for="data-pesquisa">Data da pesquisa</label><DatePicker inputId="data-pesquisa" v-model="optionForm.data_pesquisa" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
         <div><label class="label">Disponível</label><ToggleSwitch v-model="optionForm.disponivel" trueValue="S" falseValue="N" /></div>
         <div class="full"><label class="label">Observação</label><Textarea v-model="optionForm.observacao" class="w-full" rows="3" /></div>
       </form>
@@ -609,7 +737,7 @@ onMounted(loadAll);
 
     <Dialog v-model:visible="buyDialog" modal header="Marcar como comprado" class="buy-dialog">
       <form class="form-grid" @submit.prevent="buyItem">
-        <div><label class="label">Data da compra *</label><DatePicker v-model="buyForm.data_compra" dateFormat="dd/mm/yy" class="w-full" /></div>
+        <div><label class="label" for="data-compra">Data da compra *</label><DatePicker inputId="data-compra" v-model="buyForm.data_compra" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
         <div><label class="label">Valor pago *</label><InputNumber v-model="buyForm.valor_pago" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
         <div><label class="label">Loja</label><InputText v-model="buyForm.loja" class="w-full" /></div>
         <div><label class="label">Opção escolhida</label><Select v-model="buyForm.opcao_id" :options="selectedItem?.opcoes || []" optionLabel="nome_loja" optionValue="id" showClear class="w-full" /></div>
@@ -671,12 +799,26 @@ onMounted(loadAll);
 .timeline-point small { color: var(--app-text-muted); }
 .settings-form { display: grid; gap: 1rem; }
 .setting-toggle small, .create-bill-toggle small { display: block; margin-top: .15rem; color: var(--app-text-muted); }
+.initial-options { display: grid; gap: .75rem; padding: .85rem; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface-soft); }
+.initial-options-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.initial-options-header h4 { margin: 0 0 .15rem; }
+.initial-options-header small { color: var(--app-text-muted); }
+.option-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; padding-top: .75rem; border-top: 1px solid var(--app-border); }
+.option-editor .full { grid-column: 1 / -1; }
+.option-availability { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: .5rem; padding-bottom: .55rem; }
+.option-editor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.initial-option-list { display: grid; gap: .4rem; }
+.initial-option-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: .65rem; padding: .5rem .65rem; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface); }
+.initial-option-row small { display: block; max-width: 25rem; overflow: hidden; color: var(--app-text-muted); text-overflow: ellipsis; white-space: nowrap; }
 .detail-dialog { --app-dialog-width: 68rem; --app-dialog-height: 48rem; }
-.purchase-dialog, .option-dialog, .buy-dialog { --app-dialog-width: 52rem; --app-dialog-height: 46rem; }
+.purchase-dialog { --app-dialog-width: 58rem; --app-dialog-height: 48rem; }
+.option-dialog, .buy-dialog { --app-dialog-width: 52rem; --app-dialog-height: 46rem; }
 @media (max-width: 1024px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filters, .projection-values { grid-template-columns: 1fr; }
+  .option-editor, .initial-option-row { grid-template-columns: 1fr; }
+  .initial-options-header { align-items: flex-start; flex-direction: column; }
   .timeline-point { grid-template-columns: 1fr; }
 }
 @media (max-width: 360px) {

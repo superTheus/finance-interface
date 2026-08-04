@@ -28,7 +28,6 @@ const isEditMode = ref(false);
 const forms = ref<PaymentsForms[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
 const categories = ref<Categories[]>([]);
-const categoryFilter = ref<number | null>(null);
 const accountSelected = ref<Bills>();
 const accountToEdit = ref<Bills | null>(null);
 const accountToPay = ref<Bills | null>(null);
@@ -103,6 +102,8 @@ const filterOptions = ref<FilterBill>({
   radioTypeFilterPeriod: 'mounth',
   statusFilter: 'TO',
   type: 'TO',
+  search: '',
+  categoryId: null,
   datePeriod: [moment().startOf('month').toDate(), moment().toDate()]
 });
 
@@ -183,6 +184,7 @@ async function loadBills(): Promise<void> {
       limit: filter.value.limit,
       offset: requestedOffset,
       order: filter.value.order,
+      search: filter.value.search,
     });
 
     if (requestId !== latestBillsRequest) return;
@@ -419,6 +421,25 @@ const applyFilter = (filterSelected: FilterBill) => {
     });
   };
 
+  const search = filterSelected.search.trim();
+  if (search) {
+    addChip(`Busca: ${search}`, filterSelected, 'search', '');
+    currentFilters.search = search;
+  } else {
+    delete currentFilters.search;
+  }
+
+  if (filterSelected.categoryId) {
+    const category = categories.value.find((item) => item.id === filterSelected.categoryId);
+    addChip(category?.nome || 'Categoria', filterSelected, 'categoryId', null);
+    currentFilters.filter = {
+      ...currentFilters.filter,
+      id_categoria: filterSelected.categoryId,
+    };
+  } else {
+    delete currentFilters.filter?.id_categoria;
+  }
+
   if (filterSelected.statusFilter !== 'TO') {
     addChip(filterSelected.statusFilter === 'PA' ? 'Pagos' : 'Pendentes', filterSelected, 'statusFilter', 'TO');
     currentFilters.filter = {
@@ -606,17 +627,6 @@ watch(bills, () => {
   });
 });
 
-watch(categoryFilter, (categoryId) => {
-  page.value = 0;
-  filter.value.offset = 0;
-  if (categoryId) {
-    filter.value.filter = { ...filter.value.filter, id_categoria: categoryId };
-  } else if (filter.value.filter) {
-    delete filter.value.filter.id_categoria;
-  }
-  loadBills();
-});
-
 watch(() => formAccount.value.tipo, () => {
   if (formAccount.value.category && !availableCategories.value.some((category) => category.id === formAccount.value.category?.id)) {
     formAccount.value.category = undefined;
@@ -663,8 +673,6 @@ loadAllData();
           </Chip>
         </div>
       </div>
-      <Select v-model="categoryFilter" :options="categories" optionLabel="nome" optionValue="id"
-        showClear placeholder="Filtrar por categoria" class="category-quick-filter" />
     </div>
 
     <div class="card-resume-container">
@@ -740,7 +748,7 @@ loadAllData();
       :totalRecords="total" @page="changePage" />
   </section>
 
-  <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" @close="close" @apply-filters="applyFilter">
+  <ModalFilters :showFilter="showFilter" :filter-selected="filterOptions" :categories="categories" @close="close" @apply-filters="applyFilter">
   </ModalFilters>
 
   <Dialog v-model:visible="showDialogPayment" modal header="Pagar Conta" class="finance-dialog payment-dialog">
@@ -809,10 +817,11 @@ loadAllData();
                 <label for="titulo">Tipo de Conta</label>
               </FloatLabel>
 
-              <FloatLabel class="mt-4 w-full full">
-                <Select v-model="formAccount.category" :options="availableCategories" optionLabel="nome"
-                  showClear placeholder="Selecione uma categoria" class="w-full" />
-                <label>Categoria (opcional)</label>
+              <FloatLabel variant="on" class="mt-4 w-full full">
+                <Select inputId="categoria-conta" v-model="formAccount.category" :options="availableCategories"
+                  optionLabel="nome" filter filterPlaceholder="Buscar categoria" showClear class="w-full"
+                  emptyFilterMessage="Nenhuma categoria encontrada" />
+                <label for="categoria-conta">Categoria (opcional)</label>
               </FloatLabel>
 
               <FloatLabel class="mt-4 w-full full">
@@ -949,10 +958,11 @@ loadAllData();
             <label for="titulo">Tipo de Conta</label>
           </FloatLabel>
 
-          <FloatLabel class="mt-4 w-full full">
-            <Select v-model="formAccount.category" :options="availableCategories" optionLabel="nome"
-              showClear placeholder="Selecione uma categoria" class="w-full" />
-            <label>Categoria (opcional)</label>
+          <FloatLabel variant="on" class="mt-4 w-full full">
+            <Select inputId="categoria-conta-edicao" v-model="formAccount.category" :options="availableCategories"
+              optionLabel="nome" filter filterPlaceholder="Buscar categoria" showClear class="w-full"
+              emptyFilterMessage="Nenhuma categoria encontrada" />
+            <label for="categoria-conta-edicao">Categoria (opcional)</label>
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full full">
@@ -1012,11 +1022,6 @@ loadAllData();
   padding: 0.65rem 0.75rem;
 }
 
-.category-quick-filter {
-  width: min(100%, 18rem);
-  flex: 0 1 18rem;
-}
-
 .resume h3 {
   color: var(--app-text-muted);
   font-size: 0.95rem;
@@ -1056,11 +1061,6 @@ loadAllData();
   .bill-filter-bar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .category-quick-filter {
-    width: 100%;
-    flex-basis: auto;
   }
 
   .card-resume-container {
