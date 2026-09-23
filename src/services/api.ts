@@ -3,7 +3,7 @@ import type {
   CategorySummary, FinancialSettings, Notas, PartialBankAccounts, PartialBills, PeriodMonthlyTotal,
   PartialCategories, PartialUser, PaymentsForms, PurchaseItem, PurchaseOption,
   PurchasePlanRequest, PurchasePlanResponse, PurchaseProjection, ResumeBills,
-  ResumeBillsYearly, User
+  ResumeBillsYearly, User, UserProfile
 } from '@/types/types';
 import { getUser } from '@/stores/store';
 import axios, { type AxiosInstance } from 'axios';
@@ -53,6 +53,29 @@ export class Api {
     } catch (error: any) {
       throw error.response?.data || error;
     }
+  }
+
+  async getProfile(): Promise<UserProfile> {
+    const response = await this.instance.get('/private/perfil/');
+    return response.data as UserProfile;
+  }
+
+  async updateProfile(data: { nome: string; email: string }): Promise<UserProfile> {
+    const response = await this.instance.put('/private/perfil/', data);
+    return response.data as UserProfile;
+  }
+
+  async changeProfilePassword(data: { senha_atual: string; nova_senha: string }): Promise<void> {
+    await this.instance.put('/private/perfil/senha', data);
+  }
+
+  async uploadProfilePhoto(file: File): Promise<UserProfile> {
+    const form = new FormData();
+    form.append('foto', file);
+    const response = await this.instance.post('/private/perfil/foto', form, {
+      headers: { 'Content-Type': undefined },
+    });
+    return response.data as UserProfile;
   }
 
   createUser(user: PartialUser): Promise<User> {

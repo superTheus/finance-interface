@@ -6,10 +6,11 @@ import { useUserStore } from '@/stores/user';
 import { useRoute, useRouter } from 'vue-router';
 import logoDark from '@/assets/images/logos/logo_dark_alternative.png';
 import logoLight from '@/assets/images/logos/logo_light_alternative.png';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { logout } = useUserStore();
+const userStore = useUserStore();
 const config = useConfigStore();
 const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight));
 
@@ -44,7 +45,16 @@ const isActive = (path: string) => route.path === `/app/${path}`;
     </div>
 
     <div class="sidebar-footer">
-      <button type="button" class="menu-item logout" @click="logout">
+      <button type="button" :class="['user-card', { active: isActive('profile') }]"
+        aria-label="Abrir perfil" @click="navigateTo('profile')">
+        <UserAvatar :name="userStore.user?.nome || 'Usuário'" :photo="userStore.user?.foto" />
+        <span class="user-info">
+          <strong :title="userStore.user?.nome">{{ userStore.user?.nome || 'Usuário' }}</strong>
+          <small :title="userStore.user?.email">{{ userStore.user?.email }}</small>
+        </span>
+        <i class="pi pi-chevron-right"></i>
+      </button>
+      <button type="button" class="menu-item logout" @click="userStore.logout">
         <span class="menu-icon">
           <i class="pi pi-sign-out"></i>
         </span>
@@ -130,9 +140,36 @@ const isActive = (path: string) => route.path === `/app/${path}`;
 
 .sidebar-footer {
   display: grid;
+  gap: 0.45rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--app-border);
 }
+
+.user-card {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 0.55rem;
+  padding: 0.5rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.user-card:hover, .user-card.active {
+  border-color: var(--app-border);
+  background: var(--app-surface-soft);
+}
+
+.user-info { display: grid; min-width: 0; flex: 1; gap: 0.1rem; }
+.user-info strong, .user-info small { overflow-wrap: anywhere; }
+.user-info strong { font-size: 0.78rem; }
+.user-info small { color: var(--app-text-muted); font-size: 0.66rem; }
+.user-card > i { color: var(--app-text-muted); font-size: 0.7rem; }
 
 .logout {
   color: var(--orbit-pink);

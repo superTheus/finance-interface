@@ -32,7 +32,14 @@ const router = createRouter({
       name: 'app',
       component: AppView,
       redirect: '/app/dashboards',
-      children: Routers,
+      children: [
+        ...Routers,
+        {
+          path: 'profile',
+          name: 'Perfil',
+          component: () => import('@/views/app/Profile/ProfileView.vue'),
+        },
+      ],
       beforeEnter: (to, from, next) => {
         if (!isAuthenticated()) {
           next('/');

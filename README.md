@@ -1,5 +1,29 @@
 # finance-app
 
+## Configuração por ambiente
+
+O Vite carrega `.env.development` com `npm run dev` e `.env.production` com
+`npm run build`. Copie os modelos correspondentes antes de iniciar ou compilar:
+
+```sh
+cp .env.development.example .env.development
+cp .env.production.example .env.production
+```
+
+Configure nestes arquivos:
+
+| Variável | Uso |
+| --- | --- |
+| `VITE_API_BASE_URL` | URL base da API financeira, antes de `/login` e `/private` |
+| `VITE_AGENT_URL_BASE` | URL base do agente financeiro; opcional até o agente ter uma URL pública |
+| `VITE_GOOGLE_CLIENT_ID` | ID público do cliente OAuth usado no login com Google |
+
+O modelo de produção já aponta a API para `https://apifinance.supertheus.site`.
+Os arquivos com valores reais são ignorados pelo Git. As variáveis `VITE_*`
+entram no código entregue ao navegador; não coloque segredos nelas. Reinicie o
+servidor de desenvolvimento após alterar `.env.development` e gere uma nova
+compilação após alterar `.env.production`.
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup

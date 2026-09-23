@@ -8,6 +8,7 @@ export type AgentChatResponse = {
 };
 
 const missingCredentialsMessage = 'Sua sessao nao tem as credenciais necessarias para conversar com o agente. Saia e entre novamente.';
+const agentBaseUrl = import.meta.env.VITE_AGENT_URL_BASE?.trim();
 
 function encodeBasicAuth(email: string, password: string) {
   const bytes = new TextEncoder().encode(`${email}:${password}`);
@@ -70,7 +71,7 @@ export class AgentApi {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: import.meta.env.VITE_AGENT_URL_BASE,
+      baseURL: agentBaseUrl,
       timeout: 180000,
       headers: {
         'Content-Type': 'application/json',
@@ -93,6 +94,9 @@ export class AgentApi {
   }
 
   async chat(message: string): Promise<AgentChatResponse> {
+    if (!agentBaseUrl) {
+      throw new Error('O agente financeiro não está configurado neste ambiente.');
+    }
     try {
       const response = await this.instance.post<AgentChatResponse>('/api/agent/chat', { message });
       return response.data;

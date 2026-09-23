@@ -45,6 +45,27 @@ import Tooltip from 'primevue/tooltip';
 import type { App } from 'vue';
 
 const options = {
+  locale: {
+    firstDayOfWeek: 0,
+    dayNames: ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'],
+    dayNamesShort: ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'],
+    dayNamesMin: ['Do', 'Se', 'Te', 'Qa', 'Qi', 'Sx', 'Sa'],
+    monthNames: ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
+    monthNamesShort: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+    dateFormat: 'dd/mm/yy',
+    today: 'Hoje',
+    clear: 'Limpar',
+    chooseDate: 'Escolher data',
+    chooseMonth: 'Escolher mês',
+    chooseYear: 'Escolher ano',
+    prevMonth: 'Mês anterior',
+    nextMonth: 'Próximo mês',
+    prevYear: 'Ano anterior',
+    nextYear: 'Próximo ano',
+    prevDecade: 'Década anterior',
+    nextDecade: 'Próxima década',
+    weekHeader: 'Sem.',
+  },
   theme: {
     preset: Aura,
     options: {

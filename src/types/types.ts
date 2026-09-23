@@ -15,6 +15,7 @@ export interface User {
   id: number,
   nome: string,
   email: string,
+  foto?: string | null,
   token?: string,
   senha?: string,
   deletado?: "S" | "N",
@@ -23,6 +24,8 @@ export interface User {
 }
 
 export type PartialUser = Partial<User>;
+
+export type UserProfile = Pick<User, 'id' | 'nome' | 'email' | 'foto'>;
 
 export interface Config {
   darkMode: boolean

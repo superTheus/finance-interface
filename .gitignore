@@ -30,6 +30,9 @@ coverage
 *.tsbuildinfo
 
 .env
+.env.*
+!.env.development.example
+!.env.production.example
 
 *lock.json
 *.lock

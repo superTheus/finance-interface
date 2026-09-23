@@ -6,10 +6,11 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import logoDark from '@/assets/images/logos/logo_dark_alternative.png';
 import logoLight from '@/assets/images/logos/logo_light_alternative.png';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { logout } = useUserStore();
+const userStore = useUserStore();
 const config = useConfigStore();
 const brandLogo = computed(() => (config.config.darkMode ? logoDark : logoLight));
 
@@ -42,6 +43,12 @@ const isActive = (path: string) => route.path === `/app/${path}`;
       </button>
     </div>
 
+    <button type="button" :class="['mobile-profile', { active: isActive('profile') }]" @click="navigateTo('profile')">
+      <UserAvatar :name="userStore.user?.nome || 'Usuário'" :photo="userStore.user?.foto" />
+      <span><strong :title="userStore.user?.nome">{{ userStore.user?.nome || 'Usuário' }}</strong><small :title="userStore.user?.email">{{ userStore.user?.email }}</small></span>
+      <i class="pi pi-chevron-right"></i>
+    </button>
+
     <div class="actions">
       <Button
         :icon="config.config.darkMode ? 'pi pi-moon' : 'pi pi-sun'"
@@ -55,7 +62,7 @@ const isActive = (path: string) => route.path === `/app/${path}`;
         icon="pi pi-sign-out"
         aria-label="Sair"
         class="btn"
-        @click="logout"
+        @click="userStore.logout"
         severity="secondary"
         text
       />
@@ -126,6 +133,13 @@ const isActive = (path: string) => route.path === `/app/${path}`;
   font-size: 0.84rem;
   font-weight: 700;
 }
+
+.mobile-profile { display: flex; align-items: center; width: 100%; gap: .65rem; padding: .65rem; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-soft); color: var(--app-text); text-align: left; cursor: pointer; }
+.mobile-profile.active { border-color: var(--orbit-purple); }
+.mobile-profile span { display: grid; min-width: 0; flex: 1; gap: .1rem; }
+.mobile-profile strong, .mobile-profile small { overflow-wrap: anywhere; }
+.mobile-profile small { color: var(--app-text-muted); font-size: .72rem; }
+.mobile-profile > i { color: var(--app-text-muted); font-size: .75rem; }
 
 .actions {
   display: flex;
