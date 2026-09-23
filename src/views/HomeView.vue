@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useUserStore } from '@/stores/user';
 import { Api } from '@/services/api';
+import { requestGoogleAuthCode } from '@/services/googleAuth';
 import router from '@/router';
 import logoDark from '@/assets/images/logos/logo_dark.png';
 
@@ -14,6 +15,7 @@ const email = ref('');
 const pass = ref('');
 const showPass = ref(false);
 const loading = ref(false);
+const googleLoading = ref(false);
 
 onMounted(() => {
   document.documentElement.classList.add('dark-mode');
@@ -46,6 +48,30 @@ const login = async () => {
     });
   } finally {
     loading.value = false;
+  }
+};
+
+const loginWithGoogle = async () => {
+  try {
+    googleLoading.value = true;
+    const { code, codeVerifier, redirectUri } = await requestGoogleAuthCode();
+    const data = await api.loginWithGoogle({
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: redirectUri,
+    });
+    userStore.setUser(data);
+    toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Login efetuado com Google', life: 3000 });
+    router.push({ name: 'Dashboard' });
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro no login com Google',
+      detail: error?.message || 'Não foi possível entrar com Google.',
+      life: 4000,
+    });
+  } finally {
+    googleLoading.value = false;
   }
 };
 </script>
@@ -110,6 +136,11 @@ const login = async () => {
           </div>
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full submit-button" :loading="loading" />
+          <div class="google-login">
+            <span>ou</span>
+            <Button type="button" label="Entrar com Google" icon="pi pi-google" severity="secondary"
+              class="w-full" :loading="googleLoading" :disabled="loading" @click="loginWithGoogle" />
+          </div>
         </form>
       </div>
     </section>
@@ -117,6 +148,8 @@ const login = async () => {
 </template>
 
 <style scoped lang="scss">
+.google-login { display: grid; gap: .75rem; text-align: center; }
+.google-login span { color: var(--app-text-muted); }
 .home-page {
   position: relative;
   display: grid;

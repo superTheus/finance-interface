@@ -4,7 +4,7 @@ import OrbitLoader from '@/components/OrbitLoader.vue';
 import { mounths } from '@/constants/constants';
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
-import type { BankAccounts, Bills, BillsRequest, CategorySummary, ResumeBills, ResumeBillsYearly } from '@/types/types';
+import type { BankAccounts, Bills, BillsRequest, CategorySummary, PeriodMonthlyTotal, ResumeBills, ResumeBillsYearly } from '@/types/types';
 import moment from 'moment';
 import { computed, ref, watch } from 'vue';
 import { Utils } from '@/services/utils';
@@ -21,6 +21,26 @@ const filterType = ref<'d' | 'm'>('m');
 const mounthSelected = ref(0);
 const currentMounth = ref(mounths.find((m) => m.value === moment().month() + 1)?.value || 0);
 const resumeBillsYearly = ref<ResumeBillsYearly[]>([]);
+type ChartPeriodMode = 'year' | 'month' | 'date' | 'custom';
+const chartPeriodMode = ref<ChartPeriodMode>('year');
+const chartStart = ref(moment().startOf('year').format('YYYY-MM-DD'));
+const chartEnd = ref(moment().endOf('year').format('YYYY-MM-DD'));
+const chartRows = ref<PeriodMonthlyTotal[]>([]);
+const chartLoading = ref(true);
+const chartError = ref('');
+const chartPeriodDialog = ref(false);
+const draftChartMode = ref<ChartPeriodMode>('year');
+const firstChartYear = new Date(moment().year(), 0, 1);
+const draftChartYear = ref<Date>(new Date());
+const draftChartMonth = ref<Date>(new Date());
+const draftChartDate = ref<Date>(new Date());
+const draftChartRange = ref<Date[] | null>(null);
+const chartPeriodOptions = [
+  { label: 'Ano inteiro', value: 'year' },
+  { label: 'Desde um mês', value: 'month' },
+  { label: 'Desde uma data', value: 'date' },
+  { label: 'Personalizado', value: 'custom' },
+];
 const monthlyProjectionType = ref<'D' | 'R'>('D');
 const categoryMode = ref<'realizado' | 'previsto'>('realizado');
 const categorySummary = ref<CategorySummary>({
@@ -92,13 +112,42 @@ const yearlyResumeMap = computed(() => {
   return map;
 });
 
-const chartData = computed(() => {
-  const labels = monthLabels.value;
-  const map = yearlyResumeMap.value;
+const chartMonthKeys = computed(() => {
+  const keys: string[] = [];
+  const month = moment(chartStart.value).startOf('month');
+  const last = moment(chartEnd.value).startOf('month');
+  while (month.isSameOrBefore(last, 'month')) {
+    keys.push(month.format('YYYY-MM'));
+    month.add(1, 'month');
+  }
+  return keys;
+});
+const chartPeriodLabel = computed(() => {
+  if (chartPeriodMode.value === 'year') return String(moment(chartStart.value).year());
+  if (chartPeriodMode.value === 'month') {
+    return `${moment(chartStart.value).format('MM/YYYY')} – ${moment(chartEnd.value).format('MM/YYYY')}`;
+  }
+  return `${moment(chartStart.value).format('DD/MM/YYYY')} – ${moment(chartEnd.value).format('DD/MM/YYYY')}`;
+});
+const validDraftChartRange = computed(() => {
+  if (draftChartMode.value === 'year') return Boolean(draftChartYear.value);
+  if (draftChartMode.value === 'month') return Boolean(draftChartMonth.value);
+  if (draftChartMode.value === 'date') return Boolean(draftChartDate.value);
+  return Boolean(draftChartRange.value?.[0] && draftChartRange.value?.[1]
+    && moment(draftChartRange.value[0]).isSameOrBefore(draftChartRange.value[1], 'day'));
+});
 
-  const dataReceber = labels.map((label) => map.get(normalizeMonthKey(label))?.totalReceber ?? 0);
-  const dataPagar = labels.map((label) => {
-    const total = map.get(normalizeMonthKey(label))?.totalPagar ?? 0;
+const chartData = computed(() => {
+  const keys = chartMonthKeys.value;
+  const map = new Map(chartRows.value.map((row) => [row.mes, row]));
+  const labels = keys.map((key) => {
+    const date = moment(`${key}-01`);
+    const month = mounths[date.month()]?.label || key;
+    return chartPeriodMode.value === 'year' ? month : `${month.slice(0, 3)}/${date.format('YY')}`;
+  });
+  const dataReceber = keys.map((key) => map.get(key)?.totalReceber ?? 0);
+  const dataPagar = keys.map((key) => {
+    const total = map.get(key)?.totalPagar ?? 0;
     return total === 0 ? 0 : -Math.abs(total);
   });
 
@@ -120,6 +169,55 @@ const chartData = computed(() => {
     ],
   };
 });
+
+let chartRequestId = 0;
+async function loadChartPeriod(): Promise<void> {
+  const requestId = ++chartRequestId;
+  chartLoading.value = true;
+  chartError.value = '';
+  try {
+    const rows = await api.resumesPeriod({ inicio: chartStart.value, fim: chartEnd.value });
+    if (requestId === chartRequestId) chartRows.value = rows;
+  } catch (error) {
+    if (requestId === chartRequestId) {
+      chartError.value = 'Não foi possível carregar o gráfico para este período.';
+    }
+  } finally {
+    if (requestId === chartRequestId) chartLoading.value = false;
+  }
+}
+
+function openChartPeriod(): void {
+  draftChartMode.value = chartPeriodMode.value;
+  const selectedStart = moment(chartStart.value).toDate();
+  draftChartYear.value = selectedStart;
+  draftChartMonth.value = selectedStart;
+  draftChartDate.value = selectedStart;
+  draftChartRange.value = chartPeriodMode.value === 'custom'
+    ? [moment(chartStart.value).toDate(), moment(chartEnd.value).toDate()]
+    : null;
+  chartPeriodDialog.value = true;
+}
+
+function applyChartPeriod(): void {
+  if (!validDraftChartRange.value) return;
+  chartPeriodMode.value = draftChartMode.value;
+  if (draftChartMode.value === 'year') {
+    chartStart.value = moment(draftChartYear.value).startOf('year').format('YYYY-MM-DD');
+    chartEnd.value = moment(draftChartYear.value).endOf('year').format('YYYY-MM-DD');
+  } else if (draftChartMode.value === 'month') {
+    chartStart.value = moment(draftChartMonth.value).startOf('month').format('YYYY-MM-DD');
+    chartEnd.value = moment(draftChartMonth.value).add(1, 'year').endOf('month').format('YYYY-MM-DD');
+  } else if (draftChartMode.value === 'date') {
+    chartStart.value = moment(draftChartDate.value).format('YYYY-MM-DD');
+    chartEnd.value = moment(draftChartDate.value).add(1, 'year').format('YYYY-MM-DD');
+  } else {
+    chartStart.value = moment(draftChartRange.value![0]).format('YYYY-MM-DD');
+    chartEnd.value = moment(draftChartRange.value![1]).format('YYYY-MM-DD');
+  }
+  chartPeriodDialog.value = false;
+  loadChartPeriod();
+}
 
 const formatQuantity = (value: number) => value.toLocaleString('pt-BR');
 
@@ -304,6 +402,14 @@ const chartOptions = computed(() => ({
   },
 }));
 
+const barChartOptions = computed(() => ({
+  ...chartOptions.value,
+  scales: {
+    ...chartOptions.value.scales,
+    x: { ...chartOptions.value.scales.x, offset: true },
+  },
+}));
+
 const filter = ref<BillsRequest>({
   filter: {
     id_usuario: user.user?.id || 0,
@@ -423,6 +529,7 @@ watch(categoryMode, loadResumes);
 
 loadBills();
 loadResumes();
+loadChartPeriod();
 loadBankAccounts();
 </script>
 
@@ -478,14 +585,54 @@ loadBankAccounts();
 
     <div class="dashboard-grid">
       <Card class="span-12 chart-card">
-        <template #title><h3>Receitas x despesas</h3></template>
+        <template #title>
+          <div class="card-title-row">
+            <h3>Receitas x despesas</h3>
+            <div class="chart-period-actions">
+              <small>{{ chartPeriodLabel }}</small>
+              <Button label="Período" icon="pi pi-calendar" size="small" severity="secondary" @click="openChartPeriod" />
+            </div>
+          </div>
+        </template>
         <template #content>
-          <div v-if="!loading" class="card-chart">
-            <Chart type="bar" :data="chartData" :options="chartOptions" class="chart" />
+          <Message v-if="chartError" severity="error" :closable="false">{{ chartError }}</Message>
+          <div v-else-if="!chartLoading" class="card-chart">
+            <Chart type="bar" :data="chartData" :options="barChartOptions" class="chart"
+              :style="{ minWidth: `${Math.max(840, chartMonthKeys.length * 70)}px` }" />
           </div>
           <OrbitLoader v-else compact label="Calculando grafico..." />
         </template>
       </Card>
+
+      <Dialog v-model:visible="chartPeriodDialog" modal header="Período do gráfico" class="chart-period-dialog">
+        <div class="chart-period-form">
+          <SelectButton v-model="draftChartMode" :options="chartPeriodOptions" optionLabel="label" optionValue="value" :allowEmpty="false" class="period-mode-switch" />
+          <div v-if="draftChartMode === 'year'">
+            <label class="label">Ano</label>
+            <DatePicker v-model="draftChartYear" view="year" dateFormat="yy" :minDate="firstChartYear" showIcon iconDisplay="input" fluid />
+            <small>De janeiro a dezembro do ano selecionado.</small>
+          </div>
+          <div v-else-if="draftChartMode === 'month'">
+            <label class="label">Mês inicial</label>
+            <DatePicker v-model="draftChartMonth" view="month" dateFormat="mm/yy" showIcon iconDisplay="input" fluid />
+            <small>Mostra do mês escolhido até o mesmo mês do ano seguinte.</small>
+          </div>
+          <div v-else-if="draftChartMode === 'date'">
+            <label class="label">Data inicial</label>
+            <DatePicker v-model="draftChartDate" dateFormat="dd/mm/yy" showIcon iconDisplay="input" fluid />
+            <small>Mostra até a mesma data do ano seguinte, com valores agrupados por mês.</small>
+          </div>
+          <div v-else>
+            <label class="label">Data inicial e final</label>
+            <DatePicker v-model="draftChartRange" selectionMode="range" dateFormat="dd/mm/yy" showIcon iconDisplay="input" fluid />
+            <small>Os valores do período serão agrupados por mês.</small>
+          </div>
+        </div>
+        <template #footer>
+          <Button label="Cancelar" severity="secondary" @click="chartPeriodDialog = false" />
+          <Button label="Aplicar" :disabled="!validDraftChartRange" @click="applyChartPeriod" />
+        </template>
+      </Dialog>
 
       <Card class="span-12 summary-card">
         <template #title><h3>Resumo do periodo</h3></template>
@@ -685,6 +832,7 @@ loadBankAccounts();
   position: relative;
   width: 100%;
   height: clamp(15rem, 35vh, 22rem);
+  overflow-x: auto;
 }
 
 .mini-chart {
@@ -720,6 +868,39 @@ loadBankAccounts();
 .card-title-row small {
   color: var(--app-text-muted);
   font-size: 0.7rem;
+}
+
+.chart-period-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.chart-period-form {
+  display: grid;
+  gap: 1rem;
+  min-width: min(22rem, 75vw);
+}
+
+.chart-period-form .label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.chart-period-form small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--app-text-muted);
+}
+
+:global(.p-dialog.chart-period-dialog:not(.p-confirmdialog)) {
+  --app-dialog-width: 42rem;
+  height: auto !important;
+}
+
+:global(.chart-period-dialog .period-mode-switch) {
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .category-indicators {

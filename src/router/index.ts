@@ -11,6 +11,11 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/google-callback',
+      name: 'google-callback',
+      component: () => import('@/views/GoogleCallbackView.vue'),
+    },
+    {
       path: '/',
       name: 'home',
       component: HomeView,

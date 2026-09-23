@@ -1,6 +1,6 @@
 import type {
   BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest,
-  CategorySummary, FinancialSettings, Notas, PartialBankAccounts, PartialBills,
+  CategorySummary, FinancialSettings, Notas, PartialBankAccounts, PartialBills, PeriodMonthlyTotal,
   PartialCategories, PartialUser, PaymentsForms, PurchaseItem, PurchaseOption,
   PurchasePlanRequest, PurchasePlanResponse, PurchaseProjection, ResumeBills,
   ResumeBillsYearly, User
@@ -44,6 +44,15 @@ export class Api {
         reject(error.response?.data || error.response || error);
       }
     })
+  }
+
+  async loginWithGoogle(params: { code: string; code_verifier: string; redirect_uri: string }): Promise<User> {
+    try {
+      const response = await this.instance.post('/login-google', params);
+      return response.data as User;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 
   createUser(user: PartialUser): Promise<User> {
@@ -126,6 +135,15 @@ export class Api {
         reject(error.response);
       }
     })
+  }
+
+  async resumesPeriod(data: { inicio: string, fim: string }): Promise<PeriodMonthlyTotal[]> {
+    try {
+      const response = await this.instance.post('/private/resumos/periodo', data);
+      return response.data as PeriodMonthlyTotal[];
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 
   payments(): Promise<PaymentsForms[]> {
@@ -341,7 +359,7 @@ export class Api {
 
   async projectAllPurchaseItems(): Promise<{
     modo: 'plano_completo',
-    saldo_bancario_atual: number,
+    saldo_inicial_projecao: number,
     reserva_minima: number,
     saldo_disponivel_agora: number,
     horizonte_analisado_ate: string,

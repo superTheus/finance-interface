@@ -103,6 +103,13 @@ export type ResumeBillsYearly = {
   saldo: number
 }
 
+export type PeriodMonthlyTotal = {
+  mes: string,
+  totalReceber: number,
+  totalPagar: number,
+  saldo: number
+}
+
 export type PaymentsForms = {
   id: number,
   descricao: "DINHEIRO" | "CARTÃO DE CRÉDITO" | "CARTÃO DE DÉBITO" | "PIX",
@@ -246,6 +253,10 @@ export interface PurchaseProjection {
   saldo_apos_compra: number | null,
   saldo_livre_apos_compra: number | null,
   saldo_minimo_futuro_apos_compra: number | null,
+  saldo_fim_mes_apos_compra: number | null,
+  saldo_minimo_mes_apos_compra: number | null,
+  despesas_mes_seguinte: number | null,
+  folga_apos_cobrir_mes_seguinte: number | null,
   horizonte_analisado_ate: string,
   motivo: string,
   opcoes_recomendadas: PurchaseOption[],

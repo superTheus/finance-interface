@@ -117,7 +117,7 @@ type OptionForm = {
 const blankOption = (): OptionForm => ({
   nome_loja: '',
   descricao: '',
-  link: 'https://',
+  link: '',
   valor: 0,
   frete: null,
   data_pesquisa: new Date(),
@@ -167,7 +167,7 @@ const hasInitialOptionDraft = computed(() => {
     || option.descricao.trim()
     || option.valor > 0
     || option.frete !== null && option.frete !== undefined
-    || option.link !== 'https://'
+    || option.link.trim()
     || option.observacao.trim()
     || option.disponivel === 'N'
   );
@@ -251,8 +251,8 @@ function optionTotal(option: Pick<OptionForm, 'valor' | 'frete'>): number {
 
 function addInitialOption(): boolean {
   const option = initialOptionForm.value;
-  if (!option.nome_loja.trim() || option.valor <= 0 || !isSafePurchaseUrl(option.link)) {
-    toast.add({ severity: 'warn', summary: 'Revise a opção', detail: 'Informe loja, valor e URL HTTP/HTTPS válida.', life: 3500 });
+  if (!option.nome_loja.trim() || option.valor <= 0 || (option.link.trim() && !isSafePurchaseUrl(option.link.trim()))) {
+    toast.add({ severity: 'warn', summary: 'Revise a opção', detail: 'Informe loja e valor. Se preencher o link, use uma URL HTTP/HTTPS válida.', life: 3500 });
     return false;
   }
 
@@ -396,7 +396,7 @@ function openOption(option?: PurchaseOption): void {
     optionForm.value = {
       nome_loja: option.nome_loja,
       descricao: option.descricao || '',
-      link: option.link,
+      link: option.link || '',
       valor: option.valor,
       frete: option.frete,
       data_pesquisa: moment(option.data_pesquisa).toDate(),
@@ -412,13 +412,15 @@ function openOption(option?: PurchaseOption): void {
 
 async function saveOption(): Promise<void> {
   if (!selectedItem.value?.id) return;
-  if (!optionForm.value.nome_loja.trim() || optionForm.value.valor <= 0 || !isSafePurchaseUrl(optionForm.value.link)) {
-    toast.add({ severity: 'warn', summary: 'Revise os campos', detail: 'Informe loja, valor e URL HTTP/HTTPS válida.', life: 3500 });
+  if (!optionForm.value.nome_loja.trim() || optionForm.value.valor <= 0
+    || (optionForm.value.link.trim() && !isSafePurchaseUrl(optionForm.value.link.trim()))) {
+    toast.add({ severity: 'warn', summary: 'Revise os campos', detail: 'Informe loja e valor. Se preencher o link, use uma URL HTTP/HTTPS válida.', life: 3500 });
     return;
   }
   saving.value = true;
   const payload: Partial<PurchaseOption> = {
     ...optionForm.value,
+    link: optionForm.value.link.trim(),
     data_pesquisa: moment(optionForm.value.data_pesquisa).format('YYYY-MM-DD'),
   };
   try {
@@ -521,7 +523,7 @@ onMounted(loadAll);
       <div>
         <p class="eyebrow">Planejamento financeiro</p>
         <h2>Plano de compras</h2>
-        <span>Planeje desejos sem comprometer seu saldo protegido.</span>
+        <span>Projeções consideram contas pendentes, sem incluir o saldo bancário.</span>
       </div>
       <div class="page-actions">
         <Button label="Reserva e horizonte" icon="pi pi-shield" severity="secondary" class="p-button-sm" @click="settingsOpen = true" />
@@ -622,9 +624,9 @@ onMounted(loadAll);
           <div class="option-editor">
             <div><label class="label">Loja *</label><InputText v-model="initialOptionForm.nome_loja" class="w-full" /></div>
             <div><label class="label">Nome da opção</label><InputText v-model="initialOptionForm.descricao" class="w-full" /></div>
-            <div class="full"><label class="label">Link *</label><InputText v-model="initialOptionForm.link" class="w-full" /></div>
-            <div><label class="label">Valor *</label><InputNumber v-model="initialOptionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
-            <div><label class="label">Frete</label><InputNumber v-model="initialOptionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0" /></div>
+            <div class="full"><label class="label">Link (opcional)</label><InputText v-model="initialOptionForm.link" class="w-full" placeholder="https://exemplo.com/produto" /></div>
+            <div><label class="label">Valor *</label><InputNumber v-model="initialOptionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="option-price-input" inputClass="w-full" :min="0.01" /></div>
+            <div><label class="label">Frete</label><InputNumber v-model="initialOptionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="option-price-input" inputClass="w-full" :min="0" /></div>
             <div><label class="label" for="data-pesquisa-inicial">Data da pesquisa</label><DatePicker inputId="data-pesquisa-inicial" v-model="initialOptionForm.data_pesquisa" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
             <div class="option-availability"><label class="label">Disponível</label><ToggleSwitch v-model="initialOptionForm.disponivel" trueValue="S" falseValue="N" /></div>
             <div class="full"><label class="label">Observação</label><Textarea v-model="initialOptionForm.observacao" class="w-full" rows="2" /></div>
@@ -637,7 +639,7 @@ onMounted(loadAll);
             <div v-for="(option, index) in initialOptions" :key="`${option.nome_loja}-${index}`" class="initial-option-row">
               <div>
                 <strong>{{ option.nome_loja }}</strong>
-                <small>{{ option.descricao || option.link }}</small>
+                <small v-if="option.descricao || option.link">{{ option.descricao || option.link }}</small>
               </div>
               <Tag :value="option.disponivel === 'S' ? 'Disponível' : 'Indisponível'" :severity="option.disponivel === 'S' ? 'info' : 'secondary'" />
               <strong>{{ utils.formatCurrency(optionTotal(option)) }}</strong>
@@ -678,6 +680,13 @@ onMounted(loadAll);
           <div><small>Saldo após</small><strong>{{ utils.formatCurrency(activeProjection.saldo_apos_compra || 0) }}</strong></div>
           <div><small>Livre após compra</small><strong>{{ utils.formatCurrency(activeProjection.saldo_livre_apos_compra || 0) }}</strong></div>
         </div>
+        <div v-if="activeProjection?.data_sugerida && activeProjection.saldo_fim_mes_apos_compra !== null" class="month-safety">
+          <strong>Fechamento do mês da compra ({{ formatDate(moment(activeProjection.data_sugerida).endOf('month').format('YYYY-MM-DD')) }})</strong>
+          <span>Saldo no fim do mês: {{ utils.formatCurrency(activeProjection.saldo_fim_mes_apos_compra) }}</span>
+          <span>Menor saldo durante o mês: {{ utils.formatCurrency(activeProjection.saldo_minimo_mes_apos_compra || 0) }}</span>
+          <span>Despesas do mês seguinte a cobrir: {{ utils.formatCurrency(activeProjection.despesas_mes_seguinte || 0) }}</span>
+          <span>Folga após reserva e despesas do mês seguinte: {{ utils.formatCurrency(activeProjection.folga_apos_cobrir_mes_seguinte || 0) }}</span>
+        </div>
         <div class="section-title"><h4>Opções pesquisadas</h4><Button label="Adicionar opção" icon="pi pi-plus" size="small" @click="openOption()" /></div>
         <div v-if="!selectedItem.opcoes?.length" class="mini-empty">Nenhuma opção cadastrada. Os valores manuais estão sendo usados.</div>
         <div v-else class="responsive-table">
@@ -691,7 +700,7 @@ onMounted(loadAll);
                   :severity="data.selecionada === 'S' ? 'success' : data.disponivel === 'S' ? 'info' : 'secondary'" />
               </template>
             </Column>
-            <Column header="Link"><template #body="{ data }"><a :href="data.link" target="_blank" rel="noopener noreferrer" class="simple-link">Abrir <i class="pi pi-external-link"></i></a></template></Column>
+            <Column header="Link"><template #body="{ data }"><a v-if="data.link" :href="data.link" target="_blank" rel="noopener noreferrer" class="simple-link">Abrir <i class="pi pi-external-link"></i></a><span v-else>—</span></template></Column>
             <Column header="Ações">
               <template #body="{ data }"><div class="table-actions">
                 <Button v-tooltip.top="'Selecionar opção'" icon="pi pi-check" text rounded aria-label="Selecionar opção" @click="selectOption(data)" />
@@ -725,9 +734,9 @@ onMounted(loadAll);
       <form class="form-grid" @submit.prevent="saveOption">
         <div><label class="label">Loja *</label><InputText v-model="optionForm.nome_loja" class="w-full" /></div>
         <div><label class="label">Nome da opção</label><InputText v-model="optionForm.descricao" class="w-full" /></div>
-        <div class="full"><label class="label">Link *</label><InputText v-model="optionForm.link" class="w-full" /></div>
-        <div><label class="label">Valor *</label><InputNumber v-model="optionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
-        <div><label class="label">Frete</label><InputNumber v-model="optionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0" /></div>
+        <div class="full"><label class="label">Link (opcional)</label><InputText v-model="optionForm.link" class="w-full" placeholder="https://exemplo.com/produto" /></div>
+        <div><label class="label">Valor *</label><InputNumber v-model="optionForm.valor" mode="currency" currency="BRL" locale="pt-BR" class="option-price-input" inputClass="w-full" :min="0.01" /></div>
+        <div><label class="label">Frete</label><InputNumber v-model="optionForm.frete" mode="currency" currency="BRL" locale="pt-BR" class="option-price-input" inputClass="w-full" :min="0" /></div>
         <div><label class="label" for="data-pesquisa">Data da pesquisa</label><DatePicker inputId="data-pesquisa" v-model="optionForm.data_pesquisa" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
         <div><label class="label">Disponível</label><ToggleSwitch v-model="optionForm.disponivel" trueValue="S" falseValue="N" /></div>
         <div class="full"><label class="label">Observação</label><Textarea v-model="optionForm.observacao" class="w-full" rows="3" /></div>
@@ -792,6 +801,9 @@ onMounted(loadAll);
 .projection-values div { padding: .7rem; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface-soft); }
 .projection-values small, .projection-values strong { display: block; }
 .projection-values small { color: var(--app-text-muted); font-size: .7rem; }
+.month-safety { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem 1rem; padding: .85rem; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface-soft); }
+.month-safety strong { grid-column: 1 / -1; }
+.month-safety span { color: var(--app-text-muted); font-size: .85rem; }
 .section-title h4, .timeline h4, .purchase-data h4 { margin: 0; }
 .mini-empty, .purchase-data { padding: 1rem; border: 1px dashed var(--app-border); border-radius: var(--app-radius); color: var(--app-text-muted); }
 .timeline { display: grid; gap: .35rem; }
@@ -804,22 +816,30 @@ onMounted(loadAll);
 .initial-options-header h4 { margin: 0 0 .15rem; }
 .initial-options-header small { color: var(--app-text-muted); }
 .option-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; padding-top: .75rem; border-top: 1px solid var(--app-border); }
+.option-editor > div, :global(.option-dialog .form-grid > div) { min-width: 0; }
+:global(.option-price-input), :global(.option-price-input .p-inputnumber-input) { width: 100%; min-width: 0; }
 .option-editor .full { grid-column: 1 / -1; }
 .option-availability { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: .5rem; padding-bottom: .55rem; }
 .option-editor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 .initial-option-list { display: grid; gap: .4rem; }
 .initial-option-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: .65rem; padding: .5rem .65rem; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface); }
 .initial-option-row small { display: block; max-width: 25rem; overflow: hidden; color: var(--app-text-muted); text-overflow: ellipsis; white-space: nowrap; }
-.detail-dialog { --app-dialog-width: 68rem; --app-dialog-height: 48rem; }
+:global(.p-dialog.detail-dialog:not(.p-confirmdialog)) { --app-dialog-width: 84rem; --app-dialog-height: 55rem; }
 .purchase-dialog { --app-dialog-width: 58rem; --app-dialog-height: 48rem; }
 .option-dialog, .buy-dialog { --app-dialog-width: 52rem; --app-dialog-height: 46rem; }
 @media (max-width: 1024px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .filters, .projection-values { grid-template-columns: 1fr; }
+  .filters, .projection-values, .month-safety { grid-template-columns: 1fr; }
   .option-editor, .initial-option-row { grid-template-columns: 1fr; }
   .initial-options-header { align-items: flex-start; flex-direction: column; }
   .timeline-point { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  :global(.p-dialog.detail-dialog:not(.p-confirmdialog)) {
+    --app-dialog-width: calc(100vw - 1rem);
+    --app-dialog-height: calc(100dvh - var(--app-safe-area-top) - var(--app-safe-area-bottom) - 1rem);
+  }
 }
 @media (max-width: 360px) {
   .summary-grid { grid-template-columns: 1fr; }
