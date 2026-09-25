@@ -3,7 +3,7 @@ import { computed, ref, watch, type PropType } from 'vue';
 import type { Categories, FilterBill } from '@/types/types';
 import { mounths } from '@/constants/constants';
 
-const filtersOptions = ref({
+const filtersOptions = ref<{ options: FilterBill['period'][]; mounths: typeof mounths }>({
   options: [
     { label: 'Mês atual', value: 1 },
     { label: 'Próximo mês', value: 2 },
@@ -40,6 +40,13 @@ function cloneFilters(filters?: FilterBill): FilterBill | null {
 }
 
 const draftFilters = ref<FilterBill | null>(cloneFilters(props.filterSelected));
+const selectedPeriodValue = computed({
+  get: () => draftFilters.value?.period.value ?? 1,
+  set: (value: number) => {
+    const period = filtersOptions.value.options.find((option) => option.value === value);
+    if (draftFilters.value && period) draftFilters.value.period = { ...period };
+  },
+});
 const dialogVisible = computed({
   get: () => props.showFilter,
   set: (visible: boolean) => {
@@ -106,7 +113,13 @@ const applyFilters = () => {
 
     <div v-if="draftFilters" class="filter-section">
       <h4>Período</h4>
-      <SelectButton v-model="draftFilters.period" :options="filtersOptions.options" optionLabel="label" class="mt-2" />
+      <div class="filter-options">
+        <div v-for="option in filtersOptions.options" :key="option.value" class="flex items-center gap-2">
+          <RadioButton v-model="selectedPeriodValue" :input-id="`period-${option.value}`"
+            name="period" :value="option.value" />
+          <label :for="`period-${option.value}`">{{ option.label }}</label>
+        </div>
+      </div>
 
       <div v-if="draftFilters.period && draftFilters.period.value === 3" class="mt-3">
         <div class="filter-options">
