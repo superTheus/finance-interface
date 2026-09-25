@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { isAxiosError } from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { useUserStore } from '@/stores/user';
 import { Api } from '@/services/api';
@@ -25,6 +26,20 @@ const changePassView = () => {
   showPass.value = !showPass.value;
 };
 
+const loginErrorMessage = (error: unknown): string => {
+  if (isAxiosError(error)) {
+    if (error.response?.status === 401) {
+      return 'E-mail ou senha incorretos. Confira os dados e tente novamente.';
+    }
+
+    if (!error.response) {
+      return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+    }
+  }
+
+  return 'Não foi possível entrar agora. Tente novamente em instantes.';
+};
+
 const login = async () => {
   try {
     loading.value = true;
@@ -39,12 +54,12 @@ const login = async () => {
 
     userStore.setUser({ ...data, senha: pass.value });
     router.push({ name: 'Dashboard' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       severity: 'error',
-      summary: 'Erro',
-      detail: error.message,
-      life: 3000,
+      summary: 'Não foi possível entrar',
+      detail: loginErrorMessage(error),
+      life: 5000,
     });
   } finally {
     loading.value = false;

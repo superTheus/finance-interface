@@ -31,19 +31,13 @@ export class Api {
     });
   }
 
-  login(email: string, password: string): Promise<User> {
-    return new Promise<User>(async (resolve, reject) => {
-      try {
-        const response = await this.instance.post('/login', {
-          email: email,
-          senha: password
-        });
+  async login(email: string, password: string): Promise<User> {
+    const response = await this.instance.post<User>('/login', {
+      email,
+      senha: password,
+    });
 
-        resolve(response.data);
-      } catch (error: any) {
-        reject(error.response?.data || error.response || error);
-      }
-    })
+    return response.data;
   }
 
   async loginWithGoogle(params: { code: string; code_verifier: string; redirect_uri: string }): Promise<User> {
