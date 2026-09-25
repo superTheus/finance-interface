@@ -138,6 +138,10 @@ const availableCategories = computed(() => categories.value.filter((category) =>
   category.ativo === 'S' && [formAccount.value.tipo, 'A'].includes(category.tipo)
 ));
 const isCreditPayment = computed(() => formAccount.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
+const accountInstallmentOptions = computed(() => Array.from(
+  { length: formAccount.value.creditCard?.limite_parcelas ?? 0 },
+  (_, index) => ({ label: `${index + 1}x`, value: index + 1 })
+));
 
 const formPayment = ref<{
   formaPagamento: PaymentsForms;
@@ -154,6 +158,10 @@ const formPayment = ref<{
   cardInstallments: 1,
 });
 const isCreditOnPayment = computed(() => formPayment.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
+const paymentInstallmentOptions = computed(() => Array.from(
+  { length: formPayment.value.creditCard?.limite_parcelas ?? 0 },
+  (_, index) => ({ label: `${index + 1}x`, value: index + 1 })
+));
 const availablePaymentForms = computed(() =>
   accountSelected.value?.tipo === 'R' || accountSelected.value?.origem_cartao === 'fatura'
     ? forms.value.filter((form) => form.descricao !== 'CARTÃO DE CRÉDITO')
@@ -723,6 +731,18 @@ watch(() => formAccount.value.tipo, () => {
   }
 });
 
+watch(() => formAccount.value.creditCard?.id, () => {
+  if (formAccount.value.cardInstallments > (formAccount.value.creditCard?.limite_parcelas ?? 0)) {
+    formAccount.value.cardInstallments = 1;
+  }
+});
+
+watch(() => formPayment.value.creditCard?.id, () => {
+  if (formPayment.value.cardInstallments > (formPayment.value.creditCard?.limite_parcelas ?? 0)) {
+    formPayment.value.cardInstallments = 1;
+  }
+});
+
 watch(showDialogPayment, (newValue) => {
   if (!newValue) {
     resetFormPayment();
@@ -881,8 +901,9 @@ loadAllData();
 
     <div v-if="isCreditOnPayment" class="mt-3">
       <p>Parcelas nas faturas:</p>
-      <InputNumber v-model="formPayment.cardInstallments" :min="1"
-        :max="formPayment.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" class="w-full mt-2" fluid />
+      <Select v-model="formPayment.cardInstallments" :options="paymentInstallmentOptions"
+        optionLabel="label" optionValue="value" :disabled="!formPayment.creditCard"
+        placeholder="Selecione o cartão" class="w-full mt-2" />
     </div>
 
     <div v-if="!isCreditOnPayment" class="mt-3">
@@ -963,8 +984,9 @@ loadAllData();
                 </div>
                 <div>
                   <label class="label" for="parcelas-cartao-conta">Parcelas na fatura *</label>
-                  <InputNumber inputId="parcelas-cartao-conta" v-model="formAccount.cardInstallments" :min="1"
-                    :max="formAccount.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" fluid />
+                  <Select inputId="parcelas-cartao-conta" v-model="formAccount.cardInstallments"
+                    :options="accountInstallmentOptions" optionLabel="label" optionValue="value"
+                    :disabled="!formAccount.creditCard" placeholder="Selecione o cartão" class="w-full" />
                 </div>
                 <div class="full">
                   <label class="label" for="data-compra-conta">Data da compra *</label>
@@ -1123,8 +1145,9 @@ loadAllData();
             </div>
             <div>
               <label class="label" for="parcelas-cartao-edicao">Parcelas na fatura *</label>
-              <InputNumber inputId="parcelas-cartao-edicao" v-model="formAccount.cardInstallments" :min="1"
-                :max="formAccount.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" fluid />
+              <Select inputId="parcelas-cartao-edicao" v-model="formAccount.cardInstallments"
+                :options="accountInstallmentOptions" optionLabel="label" optionValue="value"
+                :disabled="!formAccount.creditCard" placeholder="Selecione o cartão" class="w-full" />
             </div>
             <div class="full">
               <label class="label" for="data-compra-edicao">Data da compra *</label>

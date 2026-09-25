@@ -9,7 +9,7 @@ import type {
 import moment from 'moment';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const api = new Api();
 const utils = new Utils();
@@ -160,6 +160,15 @@ const buyUsesCreditCard = computed(() =>
   paymentForms.value.find((form) => form.id === buyForm.value.id_forma_pagamento)?.descricao === 'CARTÃO DE CRÉDITO'
 );
 const selectedBuyCard = computed(() => creditCards.value.find((card) => card.id === buyForm.value.id_cartao_credito));
+const buyInstallmentOptions = computed(() => Array.from(
+  { length: selectedBuyCard.value?.limite_parcelas ?? 0 },
+  (_, index) => ({ label: `${index + 1}x`, value: index + 1 })
+));
+watch(selectedBuyCard, (card) => {
+  if (buyForm.value.parcelas_cartao > (card?.limite_parcelas ?? 0)) {
+    buyForm.value.parcelas_cartao = 1;
+  }
+});
 const filteredItems = computed(() => items.value.filter((item) => {
   const term = search.value.trim().toLocaleLowerCase();
   return (!term || item.nome.toLocaleLowerCase().includes(term) || item.classificacao.toLocaleLowerCase().includes(term))
@@ -768,7 +777,7 @@ onMounted(loadAll);
           <div><label class="label">Forma de pagamento *</label><Select v-model="buyForm.id_forma_pagamento" :options="paymentForms" optionLabel="descricao" optionValue="id" class="w-full" /></div>
           <template v-if="buyUsesCreditCard">
             <div><label class="label">Cartão de crédito *</label><Select v-model="buyForm.id_cartao_credito" :options="creditCards" optionLabel="nome" optionValue="id" class="w-full" /></div>
-            <div><label class="label">Parcelas no cartão *</label><InputNumber v-model="buyForm.parcelas_cartao" :min="1" :max="selectedBuyCard?.limite_parcelas || 12" showButtons class="w-full" /></div>
+            <div><label class="label">Parcelas no cartão *</label><Select v-model="buyForm.parcelas_cartao" :options="buyInstallmentOptions" optionLabel="label" optionValue="value" :disabled="!selectedBuyCard" placeholder="Selecione o cartão" class="w-full" /></div>
           </template>
         </template>
         <div class="full"><label class="label">Observação</label><Textarea v-model="buyForm.observacao" class="w-full" rows="3" /></div>
