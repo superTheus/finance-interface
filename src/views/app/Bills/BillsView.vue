@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
-import type { BankAccounts, Bills, BillsRequest, Categories, FilterBill, PaymentsForms, ResumeBills } from '@/types/types';
+import type { BankAccounts, Bills, BillsRequest, Categories, CreditCard, FilterBill, PartialBills, PaymentsForms, ResumeBills } from '@/types/types';
 import { computed, ref, watch } from 'vue';
 import moment from 'moment';
 import { Utils } from '@/services/utils';
@@ -26,6 +26,7 @@ const showDialogPayment = ref(false);
 const showDialogForm = ref(false);
 const isEditMode = ref(false);
 const forms = ref<PaymentsForms[]>([]);
+const creditCards = ref<CreditCard[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
 const categories = ref<Categories[]>([]);
 const accountSelected = ref<Bills>();
@@ -53,6 +54,9 @@ const formAccount = ref<{
   total_parcelas?: number;
   frequencia?: number;
   formaPagamento?: PaymentsForms;
+  creditCard?: CreditCard;
+  cardInstallments: number;
+  dataCompra: Date;
   bankAccount?: BankAccounts;
   category?: Categories;
   valorPago: number;
@@ -71,6 +75,8 @@ const formAccount = ref<{
   frequencia: 2,
   total_parcelas: 2,
   valorPago: 0,
+  cardInstallments: 1,
+  dataCompra: moment().toDate(),
 });
 
 const filter = ref<BillsRequest>({
@@ -103,7 +109,7 @@ const filterOptions = ref<FilterBill>({
   statusFilter: 'TO',
   type: 'TO',
   search: '',
-  categoryId: null,
+  categoryIds: [],
   datePeriod: [moment().startOf('month').toDate(), moment().toDate()]
 });
 
@@ -131,18 +137,35 @@ const items = ref<{
 const availableCategories = computed(() => categories.value.filter((category) =>
   category.ativo === 'S' && [formAccount.value.tipo, 'A'].includes(category.tipo)
 ));
+const isCreditPayment = computed(() => formAccount.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
 
 const formPayment = ref<{
   formaPagamento: PaymentsForms;
   bankAccount: BankAccounts;
   valorPago: number;
   dataPagamento: Date;
+  creditCard?: CreditCard;
+  cardInstallments: number;
 }>({
   formaPagamento: {} as PaymentsForms,
   bankAccount: {} as BankAccounts,
   dataPagamento: moment().toDate(),
-  valorPago: 0
+  valorPago: 0,
+  cardInstallments: 1,
 });
+const isCreditOnPayment = computed(() => formPayment.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
+const availablePaymentForms = computed(() =>
+  accountSelected.value?.tipo === 'R' || accountSelected.value?.origem_cartao === 'fatura'
+    ? forms.value.filter((form) => form.descricao !== 'CARTÃO DE CRÉDITO')
+    : forms.value
+);
+
+function accountError(error: unknown): string {
+  if (typeof error === 'object' && error && 'message' in error) {
+    return String((error as { message: string }).message);
+  }
+  return 'Não foi possível salvar a conta.';
+}
 
 const ChipsFilter = ref<{
   label: string;
@@ -251,11 +274,13 @@ function loadAllData() {
         id_usuario: user.user?.id || 0
       }
     }),
-    api.findCategories({ filter: { ativo: 'S' }, limit: 100 })
-  ]).then(([payments, accounts, categoryResponse]) => {
+    api.findCategories({ filter: { ativo: 'S' }, limit: 100 }),
+    api.listCreditCards()
+  ]).then(([payments, accounts, categoryResponse, cards]) => {
     forms.value = payments;
     bankAccounts.value = accounts.data;
     categories.value = categoryResponse.data;
+    creditCards.value = cards;
 
     formPayment.value.formaPagamento = payments[0];
     formPayment.value.bankAccount = accounts.data.find((account) => account.principal === 'S') || accounts.data[0];
@@ -273,20 +298,25 @@ const createBill = () => {
     descricao: formAccount.value.descricao || '',
     status: formAccount.value.status,
     id_categoria: formAccount.value.category?.id,
-    data_pagamento: moment(formAccount.value.data_pagamento).format('YYYY-MM-DD'),
+    id_forma_pagamento: formAccount.value.formaPagamento?.id ?? null,
   }
 
-  if (formAccount.value.contaParcelada === 'S') {
+  if (isCreditPayment.value) {
+    bill.id_cartao_credito = formAccount.value.creditCard?.id;
+    bill.data_compra = moment(formAccount.value.dataCompra).format('YYYY-MM-DD');
+    bill.parcelas_cartao = formAccount.value.cardInstallments;
+    bill.status = 'PE';
+  } else if (formAccount.value.contaParcelada === 'S') {
     bill.parcelas = formAccount.value.total_parcelas;
     bill.status = 'PE';
   }
 
-  if (formAccount.value.contaFrequente === 'S') {
+  if (!isCreditPayment.value && formAccount.value.contaFrequente === 'S') {
     bill.frequencia = formAccount.value.frequencia;
     bill.status = 'PE';
   }
 
-  if (formAccount.value.status === "PA") {
+  if (!isCreditPayment.value && formAccount.value.status === "PA") {
     bill.id_forma_pagamento = (formAccount.value.formaPagamento || formPayment.value.formaPagamento)?.id;
     bill.id_conta_bancaria = (formAccount.value.bankAccount || formPayment.value.bankAccount)?.id;
     bill.data_pagamento = moment(formAccount.value.dataPagamento || formPayment.value.dataPagamento).format('YYYY-MM-DD');
@@ -301,7 +331,7 @@ const createBill = () => {
     toast.add({
       severity: 'error',
       summary: 'Erro',
-      detail: error.response.data.message,
+      detail: accountError(error),
       life: 3000
     });
   }).finally(() => {
@@ -311,7 +341,7 @@ const createBill = () => {
 
 const paymentBill = (bill: Bills) => {
   saving.value = true;
-  if (formPayment.value.valorPago > (bill.valor || 0)) {
+  if (!isCreditOnPayment.value && bill.origem_cartao !== 'fatura' && formPayment.value.valorPago > (bill.valor || 0)) {
     toast.add({
       severity: 'error',
       summary: 'Erro',
@@ -321,18 +351,41 @@ const paymentBill = (bill: Bills) => {
     saving.value = false;
     return;
   }
+  if (!isCreditOnPayment.value && (!Number.isFinite(formPayment.value.valorPago) || formPayment.value.valorPago <= 0)) {
+    toast.add({ severity: 'warn', summary: 'Informe um valor pago maior que zero', life: 3000 });
+    saving.value = false;
+    return;
+  }
 
-  bill.status = 'PA';
-  bill.id_forma_pagamento = formPayment.value.formaPagamento.id;
-  bill.id_conta_bancaria = formPayment.value.bankAccount.id;
-  bill.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
-  bill.valor_pago = formPayment.value.valorPago;
+  const update: PartialBills = { id_forma_pagamento: formPayment.value.formaPagamento.id };
+  if (isCreditOnPayment.value) {
+    if (!formPayment.value.creditCard || formPayment.value.cardInstallments < 1
+      || formPayment.value.cardInstallments > formPayment.value.creditCard.limite_parcelas) {
+      toast.add({ severity: 'warn', summary: 'Selecione um cartão e a quantidade de parcelas', life: 3500 });
+      saving.value = false;
+      return;
+    }
+    update.status = 'PE';
+    update.id_cartao_credito = formPayment.value.creditCard.id;
+    update.parcelas_cartao = formPayment.value.cardInstallments;
+    update.data_compra = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
+    update.id_conta_bancaria = undefined;
+    update.data_pagamento = undefined;
+    update.valor_pago = undefined;
+  } else {
+    update.status = 'PA';
+    update.id_conta_bancaria = formPayment.value.bankAccount.id;
+    update.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
+    update.valor_pago = formPayment.value.valorPago;
+  }
 
-  api.updateBills(bill.id || 0, bill).then(() => {
+  api.updateBills(bill.id || 0, update).then(() => {
     showDialogPayment.value = false;
     showDialogForm.value = false;
     loadBills();
     loadResumes();
+  }).catch((error) => {
+    toast.add({ severity: 'error', summary: 'Erro ao atualizar conta', detail: accountError(error), life: 4000 });
   }).finally(() => { saving.value = false; });
 }
 
@@ -351,31 +404,28 @@ const updateBill = () => {
     return;
   }
 
-  if (formPayment.value.valorPago > (currentAccount.valor || 0)) {
-    toast.add({
-      severity: 'error',
-      summary: 'Erro',
-      detail: 'Valor pago não pode ser maior que o valor da conta',
-      life: 3000
-    });
-    saving.value = false;
-    return;
+  const bill: PartialBills = {
+    titulo: formAccount.value.titulo,
+    tipo: formAccount.value.tipo,
+    valor: formAccount.value.valor,
+    vencimento: moment(formAccount.value.vencimento).format('YYYY-MM-DD'),
+    descricao: formAccount.value.descricao || '',
+    id_categoria: formAccount.value.category?.id ?? null,
+    id_forma_pagamento: formAccount.value.formaPagamento?.id ?? null,
+  };
+  if (isCreditPayment.value) {
+    bill.id_cartao_credito = formAccount.value.creditCard?.id ?? null;
+    bill.data_compra = moment(formAccount.value.dataCompra).format('YYYY-MM-DD');
+    bill.parcelas_cartao = formAccount.value.cardInstallments;
   }
-
-  const bill = { ...currentAccount }
-
-  bill.titulo = formAccount.value.titulo;
-  bill.tipo = formAccount.value.tipo;
-  bill.valor = formAccount.value.valor;
-  bill.vencimento = moment(formAccount.value.vencimento).format('YYYY-MM-DD');
-  bill.descricao = formAccount.value.descricao || '';
-  bill.id_categoria = formAccount.value.category?.id;
 
   api.updateBills(currentAccount.id || 0, bill).then(() => {
     showDialogPayment.value = false;
     showDialogForm.value = false;
     loadBills();
     loadResumes();
+  }).catch((error) => {
+    toast.add({ severity: 'error', summary: 'Erro ao atualizar conta', detail: accountError(error), life: 4000 });
   }).finally(() => { saving.value = false; });
 }
 
@@ -395,6 +445,21 @@ const deleteBill = ({ success, error }: { success?: () => void, error?: () => vo
     }
   });
 }
+
+const removeFromCard = async (bill: Bills) => {
+  if (!bill.id || saving.value) return;
+  saving.value = true;
+  try {
+    await api.updateBills(bill.id, { id_forma_pagamento: null });
+    toast.add({ severity: 'success', summary: 'Compra retirada do cartão', detail: 'A fatura foi recalculada.', life: 3500 });
+    await loadBills();
+    loadResumes();
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Erro ao retirar do cartão', detail: accountError(error), life: 4000 });
+  } finally {
+    saving.value = false;
+  }
+};
 
 const close = () => {
   showFilter.value = false;
@@ -429,12 +494,22 @@ const applyFilter = (filterSelected: FilterBill) => {
     delete currentFilters.search;
   }
 
-  if (filterSelected.categoryId) {
-    const category = categories.value.find((item) => item.id === filterSelected.categoryId);
-    addChip(category?.nome || 'Categoria', filterSelected, 'categoryId', null);
+  const categoryIds = [...new Set(filterSelected.categoryIds)];
+  if (categoryIds.length) {
+    categoryIds.forEach((categoryId) => {
+      const category = categories.value.find((item) => item.id === categoryId);
+      ChipsFilter.value.push({
+        label: category?.nome || `Categoria ${categoryId}`,
+        data: filterSelected,
+        remove: () => applyFilter({
+          ...filterSelected,
+          categoryIds: categoryIds.filter((id) => id !== categoryId),
+        }),
+      });
+    });
     currentFilters.filter = {
       ...currentFilters.filter,
-      id_categoria: filterSelected.categoryId,
+      id_categoria: { IN: categoryIds },
     };
   } else {
     delete currentFilters.filter?.id_categoria;
@@ -548,7 +623,8 @@ function resetFormPayment() {
     formaPagamento: forms.value[0],
     bankAccount: bankAccounts.value.find((account) => account.principal === 'S') || bankAccounts.value[0],
     dataPagamento: moment().toDate(),
-    valorPago: 0
+    valorPago: 0,
+    cardInstallments: 1,
   };
   accountToPay.value = null;
   accountSelected.value = undefined;
@@ -571,6 +647,8 @@ function resetFormEdit() {
     frequencia: 2,
     total_parcelas: 2,
     valorPago: 0,
+    cardInstallments: 1,
+    dataCompra: moment().toDate(),
   };
 }
 
@@ -579,7 +657,7 @@ watch(bills, () => {
   items.value = data.map((bill) => {
     const items = []
 
-    if (bill.status === 'PE') {
+    if (bill.status === 'PE' && bill.origem_cartao !== 'compra') {
       items.push({
         label: 'Dar baixa',
         icon: 'pi pi-arrow-circle-down',
@@ -587,13 +665,21 @@ watch(bills, () => {
         command: () => {
           accountToPay.value = { ...bill };
           formPayment.value.valorPago = bill.valor;
+          formPayment.value.formaPagamento = forms.value.find((payment) => payment.id === bill.id_forma_pagamento)
+            || forms.value.find((payment) => payment.descricao !== 'CARTÃO DE CRÉDITO') || forms.value[0];
           accountSelected.value = bill;
           showDialogPayment.value = true;
         }
       });
     }
 
-    items.push(
+    if (bill.origem_cartao === 'compra') items.push({
+      label: 'Retirar do cartão',
+      icon: 'pi pi-undo',
+      command: () => removeFromCard(bill),
+    });
+
+    if (bill.origem_cartao !== 'fatura') items.push(
       {
         label: 'Editar',
         icon: 'pi pi-pencil',
@@ -609,6 +695,10 @@ watch(bills, () => {
           formAccount.value.vencimento = moment(bill.vencimento as string).toDate();
           formAccount.value.descricao = bill.descricao || '';
           formAccount.value.category = categories.value.find((category) => category.id === bill.id_categoria);
+          formAccount.value.formaPagamento = forms.value.find((payment) => payment.id === bill.id_forma_pagamento);
+          formAccount.value.creditCard = creditCards.value.find((card) => card.id === bill.id_cartao_credito);
+          formAccount.value.cardInstallments = bill.parcelas_cartao || 1;
+          formAccount.value.dataCompra = moment(bill.data_compra || bill.vencimento as string).toDate();
         }
       },
       {
@@ -705,11 +795,17 @@ loadAllData();
             <Badge :value="slotProps.data.tipo === 'R' ? 'Receita' : 'Despesa'"
               :severity="slotProps.data.tipo === 'R' ? 'success' : 'danger'">
             </Badge>
+            <Badge v-if="slotProps.data.origem_cartao" class="ml-2"
+              :value="slotProps.data.origem_cartao === 'fatura' ? 'Fatura' : 'Compra no cartão'" severity="info" />
           </template>
         </Column>
         <Column field="valor" header="Valor">
           <template #body="slotProps">
-            <span>{{ utils.formatCurrency(slotProps.data.valor) }}</span>
+            <span>{{ utils.formatCurrency(slotProps.data.origem_cartao === 'fatura' && slotProps.data.status === 'PA'
+              ? slotProps.data.valor_pago ?? slotProps.data.valor : slotProps.data.valor) }}</span>
+            <small v-if="slotProps.data.origem_cartao === 'fatura' && slotProps.data.status === 'PA'
+              && slotProps.data.valor_pago != null && Number(slotProps.data.valor_pago) !== Number(slotProps.data.valor)"
+              class="block">Fatura calculada: {{ utils.formatCurrency(slotProps.data.valor) }}</small>
           </template>
         </Column>
         <Column field="id_categoria" header="Categoria">
@@ -722,8 +818,8 @@ loadAllData();
         </Column>
         <Column field="status" header="Situação">
           <template #body="slotProps">
-            <Badge :value="slotProps.data.status === 'PA' ? 'Pago' : 'Pendente'"
-              :severity="slotProps.data.status === 'PA' ? 'success' : 'danger'">
+            <Badge :value="slotProps.data.origem_cartao === 'compra' ? 'Na fatura' : slotProps.data.status === 'PA' ? 'Pago' : 'Pendente'"
+              :severity="slotProps.data.origem_cartao === 'compra' ? 'info' : slotProps.data.status === 'PA' ? 'success' : 'danger'">
             </Badge>
           </template>
         </Column>
@@ -764,33 +860,46 @@ loadAllData();
         === 'D' ? 'Pagar' : 'Receber' }} </span>
     </div>
 
-    <div class="mt-3">
-      <p> Valor Pago: </p>
+    <div v-if="!isCreditOnPayment" class="mt-3">
+      <p>{{ accountSelected?.origem_cartao === 'fatura' ? 'Valor efetivamente pago:' : 'Valor Pago:' }}</p>
       <InputNumber v-model="formPayment.valorPago" date-format="dd/mm/yy" class="w-full mt-2" :minFractionDigits="2"
         :maxFractionDigits="2" fluid />
+      <small v-if="accountSelected?.origem_cartao === 'fatura'">Você pode ajustar o valor pago. Se for menor que a fatura, o saldo restante será lançado como conta pendente.</small>
     </div>
 
     <div class="mt-4">
       <p> Selecione Forma de Pagamento: </p>
-      <Select v-model="formPayment.formaPagamento" :options="forms" optionLabel="descricao"
+      <Select v-model="formPayment.formaPagamento" :options="availablePaymentForms" optionLabel="descricao"
         placeholder="Selecione a forma" class="w-full mt-2" />
     </div>
 
-    <div class="mt-3">
+    <div v-if="isCreditOnPayment" class="mt-3">
+      <p>Cartão de crédito:</p>
+      <Select v-model="formPayment.creditCard" :options="creditCards" optionLabel="nome"
+        placeholder="Selecione o cartão" class="w-full mt-2" />
+    </div>
+
+    <div v-if="isCreditOnPayment" class="mt-3">
+      <p>Parcelas nas faturas:</p>
+      <InputNumber v-model="formPayment.cardInstallments" :min="1"
+        :max="formPayment.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" class="w-full mt-2" fluid />
+    </div>
+
+    <div v-if="!isCreditOnPayment" class="mt-3">
       <p> Selecione Conta Bancária: </p>
       <Select v-model="formPayment.bankAccount" :options="bankAccounts" optionLabel="descricao"
         placeholder="Selecione a conta bancária" class="w-full mt-2" />
     </div>
 
     <div class="mt-3">
-      <p> Data do Pagamento: </p>
+      <p>{{ isCreditOnPayment ? 'Data da compra:' : 'Data do pagamento:' }}</p>
       <DatePicker v-model="formPayment.dataPagamento" date-format="dd/mm/yy" class="w-full mt-2" />
     </div>
 
     <template #footer>
       <div class="dialog-footer-actions mt-4">
         <Button label="Cancelar" class="p-button-secondary" @click="showDialogPayment = false" />
-        <Button v-if="accountSelected" label="Pagar" class="p-button-primary" :loading="saving" :disabled="saving || !formPayment.formaPagamento?.id || !formPayment.bankAccount?.id"
+        <Button v-if="accountSelected" :label="isCreditOnPayment ? 'Registrar no cartão' : 'Pagar'" class="p-button-primary" :loading="saving" :disabled="saving || !formPayment.formaPagamento?.id || (!isCreditOnPayment && !formPayment.bankAccount?.id)"
           @click="() => paymentBill(accountSelected!)" />
       </div>
     </template>
@@ -802,8 +911,8 @@ loadAllData();
       <Stepper v-if="!isEditMode" value="1" class="w-full" linear>
         <StepList>
           <Step value="1">Dados iniciais</Step>
-          <Step value="2">Parcelas</Step>
-          <Step v-if="formAccount.contaParcelada === 'N' && formAccount.contaFrequente === 'N'" value="3">Pagamento
+          <Step v-if="!isCreditPayment" value="2">Parcelas</Step>
+          <Step v-if="!isCreditPayment && formAccount.contaParcelada === 'N' && formAccount.contaFrequente === 'N'" value="3">Pagamento
           </Step>
         </StepList>
         <StepPanels>
@@ -840,6 +949,30 @@ loadAllData();
                 <label for="vencimento">Data Vencimento</label>
               </FloatLabel>
 
+              <div class="full">
+                <label class="label" for="forma-pagamento-conta">Forma de pagamento (opcional)</label>
+                <Select inputId="forma-pagamento-conta" v-model="formAccount.formaPagamento" :options="formAccount.tipo === 'R' ? forms.filter(form => form.descricao !== 'CARTÃO DE CRÉDITO') : forms"
+                  optionLabel="descricao" showClear placeholder="Definir antes da baixa" class="w-full" />
+              </div>
+
+              <template v-if="isCreditPayment">
+                <div>
+                  <label class="label" for="cartao-conta">Cartão de crédito *</label>
+                  <Select inputId="cartao-conta" v-model="formAccount.creditCard" :options="creditCards"
+                    optionLabel="nome" placeholder="Selecione o cartão" class="w-full" />
+                </div>
+                <div>
+                  <label class="label" for="parcelas-cartao-conta">Parcelas na fatura *</label>
+                  <InputNumber inputId="parcelas-cartao-conta" v-model="formAccount.cardInstallments" :min="1"
+                    :max="formAccount.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" fluid />
+                </div>
+                <div class="full">
+                  <label class="label" for="data-compra-conta">Data da compra *</label>
+                  <DatePicker inputId="data-compra-conta" v-model="formAccount.dataCompra" date-format="dd/mm/yy" class="w-full" showIcon fluid />
+                  <small>A compra será distribuída nas faturas. O vencimento acima não define a primeira parcela.</small>
+                </div>
+              </template>
+
               <FloatLabel class="mt-4 w-full full">
                 <Textarea id="descricao" v-model="formAccount.descricao" class="w-full bill-description" rows="5" autoResize />
                 <label for="descricao">Descrição (opcional)</label>
@@ -847,11 +980,12 @@ loadAllData();
 
             </div>
             <div class="flex pt-6 justify-end w-full">
-              <Button label="Continuar" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
+              <Button v-if="isCreditPayment" type="submit" label="Criar compra no cartão" icon="pi pi-check" :loading="saving" :disabled="saving" />
+              <Button v-else label="Continuar" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
             </div>
           </StepPanel>
 
-          <StepPanel v-slot="{ activateCallback }" value="2">
+          <StepPanel v-if="!isCreditPayment" v-slot="{ activateCallback }" value="2">
             <div v-if="formAccount.contaFrequente === 'N'" class="form-section form-grid">
               <FloatLabel class="mt-4 w-full full">
                 <Select v-model="formAccount.contaParcelada" :options="[
@@ -896,7 +1030,7 @@ loadAllData();
             </div>
           </StepPanel>
 
-          <StepPanel v-slot="{ activateCallback }" value="3">
+          <StepPanel v-if="!isCreditPayment" v-slot="{ activateCallback }" value="3">
             <div class="form-section form-grid">
 
               <FloatLabel class="mt-4 w-full full">
@@ -919,12 +1053,6 @@ loadAllData();
                   <p> Valor Pago: </p>
                   <InputNumber v-model="formAccount.valorPago" date-format="dd/mm/yy" class="w-full mt-2"
                     :minFractionDigits="2" :maxFractionDigits="2" fluid />
-                </div>
-
-                <div class="mt-4">
-                  <p> Selecione Forma de Pagamento: </p>
-                  <Select v-model="formAccount.formaPagamento" :options="forms" optionLabel="descricao"
-                    placeholder="Selecione a forma" class="w-full mt-2" />
                 </div>
 
                 <div class="mt-3">
@@ -980,6 +1108,30 @@ loadAllData();
             <DatePicker id="vencimento" v-model="formAccount.vencimento" date-format="dd/mm/yy" class="w-full" />
             <label for="vencimento">Data Vencimento</label>
           </FloatLabel>
+
+          <div class="full">
+            <label class="label" for="forma-pagamento-edicao">Forma de pagamento (opcional)</label>
+            <Select inputId="forma-pagamento-edicao" v-model="formAccount.formaPagamento" :options="formAccount.tipo === 'R' ? forms.filter(form => form.descricao !== 'CARTÃO DE CRÉDITO') : forms"
+              optionLabel="descricao" showClear placeholder="Definir antes da baixa" class="w-full" />
+          </div>
+
+          <template v-if="isCreditPayment">
+            <div>
+              <label class="label" for="cartao-edicao">Cartão de crédito *</label>
+              <Select inputId="cartao-edicao" v-model="formAccount.creditCard" :options="creditCards"
+                optionLabel="nome" placeholder="Selecione o cartão" class="w-full" />
+            </div>
+            <div>
+              <label class="label" for="parcelas-cartao-edicao">Parcelas na fatura *</label>
+              <InputNumber inputId="parcelas-cartao-edicao" v-model="formAccount.cardInstallments" :min="1"
+                :max="formAccount.creditCard?.limite_parcelas || 120" :useGrouping="false" suffix="x" fluid />
+            </div>
+            <div class="full">
+              <label class="label" for="data-compra-edicao">Data da compra *</label>
+              <DatePicker inputId="data-compra-edicao" v-model="formAccount.dataCompra" date-format="dd/mm/yy" class="w-full" showIcon fluid />
+              <small>Esta data determina a primeira fatura. A previsão de saldo considera o vencimento da fatura; se ela vencer no mesmo mês, o saldo mensal não muda.</small>
+            </div>
+          </template>
 
           <FloatLabel class="mt-4 w-full full">
             <Textarea id="descricao" v-model="formAccount.descricao" class="w-full bill-description" rows="5" autoResize />

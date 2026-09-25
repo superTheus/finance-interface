@@ -24,6 +24,7 @@ import InputMask from 'primevue/inputmask';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
+import MultiSelect from 'primevue/multiselect';
 import Paginator from 'primevue/paginator';
 import RadioButton from 'primevue/radiobutton';
 import ProgressSpinner from 'primevue/progressspinner';
@@ -77,7 +78,7 @@ const options = {
 const components = [
   Button, InputText, InputGroup, InputGroupAddon, DataTable, Column, Card, Badge,
   DatePicker, Drawer, TieredMenu, Dialog, Divider, ToggleSwitch, SelectButton,
-  Select, RadioButton, SplitButton, Paginator, Chip, Carousel, Chart, InputMask, InputNumber,
+  Select, MultiSelect, RadioButton, SplitButton, Paginator, Chip, Carousel, Chart, InputMask, InputNumber,
   Checkbox, Stepper, StepPanels, StepList, StepItem, Step, StepPanel, FloatLabel, Textarea, ConfirmDialog
   , ColorPicker, Message, ProgressSpinner, Tag
 ];

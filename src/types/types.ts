@@ -34,9 +34,10 @@ export interface Config {
 export interface Bills {
   id?: number,
   id_usuario: number,
-  id_forma_pagamento?: number,
+  id_forma_pagamento?: number | null,
+  id_cartao_credito?: number | null,
   id_conta_bancaria?: number,
-  id_categoria?: number,
+  id_categoria?: number | null,
   categoria?: Categories,
   token_unico?: string,
   titulo: string,
@@ -50,6 +51,10 @@ export interface Bills {
     AND?: string
     OR?: string
   },
+  data_compra?: string | null,
+  parcelas_cartao?: number | null,
+  origem_cartao?: 'compra' | 'fatura' | null,
+  ciclo_fatura?: string | null,
   parcelas?: number,
   num_parcela?: number,
   conta_agrupada?: "S" | "N",
@@ -78,8 +83,12 @@ export type BillsForm = {
 
 export type PartialBills = Partial<Bills>;
 
+export type BillsFilter = Omit<PartialBills, 'id_categoria'> & {
+  id_categoria?: number | null | { IN: number[] },
+};
+
 export interface BillsRequest extends request {
-  filter?: PartialBills,
+  filter?: BillsFilter,
   search?: string
 }
 
@@ -130,6 +139,16 @@ export interface BankAccounts {
   dthr_atualizacao?: string
 }
 
+export interface CreditCard {
+  id: number,
+  nome: string,
+  dia_fechamento: number,
+  dia_vencimento: number,
+  limite_parcelas: number,
+}
+
+export type CreditCardInput = Omit<CreditCard, 'id'>;
+
 export type PartialBankAccounts = Partial<BankAccounts>;
 
 export interface BankAccountsRequest extends request {
@@ -170,7 +189,7 @@ export type FilterBill = {
   statusFilter: 'TO' | 'PE' | 'PA',
   type: 'TO' | 'D' | 'R',
   search: string,
-  categoryId?: number | null,
+  categoryIds: number[],
   datePeriod: Date[]
 }
 
@@ -258,8 +277,6 @@ export interface PurchaseProjection {
   saldo_minimo_futuro_apos_compra: number | null,
   saldo_fim_mes_apos_compra: number | null,
   saldo_minimo_mes_apos_compra: number | null,
-  despesas_mes_seguinte: number | null,
-  folga_apos_cobrir_mes_seguinte: number | null,
   horizonte_analisado_ate: string,
   motivo: string,
   opcoes_recomendadas: PurchaseOption[],

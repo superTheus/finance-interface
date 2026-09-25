@@ -1,6 +1,6 @@
 import type {
   BankAccounts, BankAccountsRequest, Bills, BillsRequest, Categories, CategoriesRequest,
-  CategorySummary, FinancialSettings, Notas, PartialBankAccounts, PartialBills, PeriodMonthlyTotal,
+  CategorySummary, CreditCard, CreditCardInput, FinancialSettings, Notas, PartialBankAccounts, PartialBills, PeriodMonthlyTotal,
   PartialCategories, PartialUser, PaymentsForms, PurchaseItem, PurchaseOption,
   PurchasePlanRequest, PurchasePlanResponse, PurchaseProjection, ResumeBills,
   ResumeBillsYearly, User, UserProfile
@@ -78,6 +78,25 @@ export class Api {
     return response.data as UserProfile;
   }
 
+  async listCreditCards(): Promise<CreditCard[]> {
+    const response = await this.instance.get('/private/cartoes-credito/');
+    return response.data.data as CreditCard[];
+  }
+
+  async createCreditCard(data: CreditCardInput): Promise<CreditCard> {
+    const response = await this.instance.post('/private/cartoes-credito/', data);
+    return response.data as CreditCard;
+  }
+
+  async updateCreditCard(id: number, data: CreditCardInput): Promise<CreditCard> {
+    const response = await this.instance.put(`/private/cartoes-credito/${id}`, data);
+    return response.data as CreditCard;
+  }
+
+  async deleteCreditCard(id: number): Promise<void> {
+    await this.instance.delete(`/private/cartoes-credito/${id}`);
+  }
+
   createUser(user: PartialUser): Promise<User> {
     return new Promise<User>(async (resolve, reject) => {
       try {
@@ -121,7 +140,7 @@ export class Api {
   updateBills(id: number, bill: PartialBills): Promise<Bills> {
     return new Promise<Bills>(async (resolve, reject) => {
       try {
-        const response = await this.instance.put(`/private/contas/atualizar/${id}`, bill);
+        const response = await this.instance.put(`/private/contas/atualizar/${id}`, bill, { timeout: 30000 });
         resolve(response.data);
       } catch (error: any) {
         reject(error.response?.data || error);
@@ -451,6 +470,8 @@ export class Api {
     id_categoria?: number,
     id_conta_bancaria?: number,
     id_forma_pagamento?: number,
+    id_cartao_credito?: number,
+    parcelas_cartao?: number,
     opcao_id?: number
   }): Promise<PurchaseItem> {
     try {

@@ -32,7 +32,7 @@ function cloneFilters(filters?: FilterBill): FilterBill | null {
   return {
     ...filters,
     search: filters.search ?? '',
-    categoryId: filters.categoryId ?? null,
+    categoryIds: [...(filters.categoryIds ?? [])],
     period: { ...filters.period },
     month: { ...filters.month },
     datePeriod: filters.datePeriod.map((date) => new Date(date)),
@@ -89,13 +89,13 @@ const applyFilters = () => {
 
     <div v-if="draftFilters" class="filter-section">
       <h4>Categoria</h4>
-      <Select
-        v-model="draftFilters.categoryId"
+      <MultiSelect
+        v-model="draftFilters.categoryIds"
         :options="categories"
         optionLabel="nome"
         optionValue="id"
         filter
-        showClear
+        display="chip"
         class="w-full mt-2"
         placeholder="Todas as categorias"
         empty-filter-message="Nenhuma categoria encontrada"

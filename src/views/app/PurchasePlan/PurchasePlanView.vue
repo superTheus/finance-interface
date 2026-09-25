@@ -3,7 +3,7 @@ import { Api } from '@/services/api';
 import { Utils } from '@/services/utils';
 import { calculatePurchaseOptionRange, isSafePurchaseUrl, isValidPriceRange } from '@/services/purchasePlanning';
 import type {
-  BankAccounts, Categories, FinancialSettings, PaymentsForms, PurchaseItem,
+  BankAccounts, Categories, CreditCard, FinancialSettings, PaymentsForms, PurchaseItem,
   PurchaseOption, PurchasePlanSummary, PurchasePriority, PurchaseProjection,
 } from '@/types/types';
 import moment from 'moment';
@@ -21,6 +21,7 @@ const items = ref<PurchaseItem[]>([]);
 const categories = ref<Categories[]>([]);
 const bankAccounts = ref<BankAccounts[]>([]);
 const paymentForms = ref<PaymentsForms[]>([]);
+const creditCards = ref<CreditCard[]>([]);
 const summary = ref<PurchasePlanSummary>({
   total_itens_planejados: 0,
   itens_disponiveis_agora: 0,
@@ -139,6 +140,8 @@ const buyForm = ref({
   id_categoria: undefined as number | undefined,
   id_conta_bancaria: undefined as number | undefined,
   id_forma_pagamento: undefined as number | undefined,
+  id_cartao_credito: undefined as number | undefined,
+  parcelas_cartao: 1,
   opcao_id: undefined as number | undefined,
 });
 
@@ -153,6 +156,10 @@ const activeExpenseCategories = computed(() =>
     category.ativo === 'S' && ['D', 'A'].includes(category.tipo)
   )
 );
+const buyUsesCreditCard = computed(() =>
+  paymentForms.value.find((form) => form.id === buyForm.value.id_forma_pagamento)?.descricao === 'CARTÃO DE CRÉDITO'
+);
+const selectedBuyCard = computed(() => creditCards.value.find((card) => card.id === buyForm.value.id_cartao_credito));
 const filteredItems = computed(() => items.value.filter((item) => {
   const term = search.value.trim().toLocaleLowerCase();
   return (!term || item.nome.toLocaleLowerCase().includes(term) || item.classificacao.toLocaleLowerCase().includes(term))
@@ -193,12 +200,13 @@ function formatDate(date?: string | null): string {
 async function loadAll(): Promise<void> {
   loading.value = true;
   try {
-    const [plan, config, categoryResponse, bankResponse, forms] = await Promise.all([
+    const [plan, config, categoryResponse, bankResponse, forms, cards] = await Promise.all([
       api.findPurchaseItems(),
       api.getFinancialSettings(),
       api.findCategories({ filter: { ativo: 'S' }, limit: 100 }),
       api.findBankAccounts({ filter: {} }),
       api.payments(),
+      api.listCreditCards(),
     ]);
     items.value = plan.data;
     summary.value = plan.resumo;
@@ -206,6 +214,7 @@ async function loadAll(): Promise<void> {
     categories.value = categoryResponse.data;
     bankAccounts.value = bankResponse.data;
     paymentForms.value = forms;
+    creditCards.value = cards;
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Erro ao carregar', detail: errorMessage(error), life: 4500 });
   } finally {
@@ -472,6 +481,8 @@ function openBuy(item: PurchaseItem): void {
     id_categoria: undefined,
     id_conta_bancaria: bankAccounts.value.find((bank) => bank.principal === 'S')?.id ?? bankAccounts.value[0]?.id,
     id_forma_pagamento: paymentForms.value[0]?.id,
+    id_cartao_credito: creditCards.value[0]?.id,
+    parcelas_cartao: 1,
     opcao_id: chosen?.id,
   };
   buyDialog.value = true;
@@ -491,7 +502,7 @@ async function buyItem(): Promise<void> {
     });
     buyDialog.value = false;
     detailDialog.value = false;
-    toast.add({ severity: 'success', summary: 'Compra registrada', detail: 'O item e o saldo foram atualizados.', life: 3500 });
+    toast.add({ severity: 'success', summary: 'Compra registrada', detail: !buyForm.value.criar_conta ? 'O item foi marcado como comprado.' : buyUsesCreditCard.value ? 'A compra foi incluída nas faturas do cartão.' : 'O item e o saldo foram atualizados.', life: 3500 });
     await loadAll();
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Erro ao registrar compra', detail: errorMessage(error), life: 4500 });
@@ -673,7 +684,8 @@ onMounted(loadAll);
           <strong>{{ activeProjection.motivo }}</strong><br />
           Valor analisado: {{ utils.formatCurrency(activeProjection.valor_usado_no_calculo) }} ·
           Data segura: {{ formatDate(activeProjection.data_sugerida) }} ·
-          Reserva: {{ utils.formatCurrency(activeProjection.reserva_minima) }}
+          Reserva: {{ utils.formatCurrency(activeProjection.reserva_minima) }}<br />
+          Datas de compra avaliadas até {{ formatDate(activeProjection.horizonte_analisado_ate) }}, considerando as contas pendentes e a reserva mínima.
         </Message>
         <div v-if="activeProjection" class="projection-values">
           <div><small>Saldo antes</small><strong>{{ utils.formatCurrency(activeProjection.saldo_antes_da_compra || 0) }}</strong></div>
@@ -684,8 +696,6 @@ onMounted(loadAll);
           <strong>Fechamento do mês da compra ({{ formatDate(moment(activeProjection.data_sugerida).endOf('month').format('YYYY-MM-DD')) }})</strong>
           <span>Saldo no fim do mês: {{ utils.formatCurrency(activeProjection.saldo_fim_mes_apos_compra) }}</span>
           <span>Menor saldo durante o mês: {{ utils.formatCurrency(activeProjection.saldo_minimo_mes_apos_compra || 0) }}</span>
-          <span>Despesas do mês seguinte a cobrir: {{ utils.formatCurrency(activeProjection.despesas_mes_seguinte || 0) }}</span>
-          <span>Folga após reserva e despesas do mês seguinte: {{ utils.formatCurrency(activeProjection.folga_apos_cobrir_mes_seguinte || 0) }}</span>
         </div>
         <div class="section-title"><h4>Opções pesquisadas</h4><Button label="Adicionar opção" icon="pi pi-plus" size="small" @click="openOption()" /></div>
         <div v-if="!selectedItem.opcoes?.length" class="mini-empty">Nenhuma opção cadastrada. Os valores manuais estão sendo usados.</div>
@@ -747,15 +757,19 @@ onMounted(loadAll);
     <Dialog v-model:visible="buyDialog" modal header="Marcar como comprado" class="buy-dialog">
       <form class="form-grid" @submit.prevent="buyItem">
         <div><label class="label" for="data-compra">Data da compra *</label><DatePicker inputId="data-compra" v-model="buyForm.data_compra" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" class="w-full" showIcon iconDisplay="input" fluid /></div>
-        <div><label class="label">Valor pago *</label><InputNumber v-model="buyForm.valor_pago" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
+        <div><label class="label">{{ buyUsesCreditCard ? 'Valor da compra *' : 'Valor pago *' }}</label><InputNumber v-model="buyForm.valor_pago" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0.01" /></div>
         <div><label class="label">Loja</label><InputText v-model="buyForm.loja" class="w-full" /></div>
         <div><label class="label">Opção escolhida</label><Select v-model="buyForm.opcao_id" :options="selectedItem?.opcoes || []" optionLabel="nome_loja" optionValue="id" showClear class="w-full" /></div>
         <div class="full"><label class="label">Link</label><InputText v-model="buyForm.link" class="w-full" /></div>
-        <div class="full create-bill-toggle"><div><strong>Criar despesa financeira</strong><small>Registra a compra como paga e atualiza o saldo bancário.</small></div><ToggleSwitch v-model="buyForm.criar_conta" /></div>
+        <div class="full create-bill-toggle"><div><strong>Criar despesa financeira</strong><small>{{ buyUsesCreditCard ? 'Distribui a compra nas faturas do cartão.' : 'Registra a compra como paga e atualiza o saldo bancário.' }}</small></div><ToggleSwitch v-model="buyForm.criar_conta" /></div>
         <template v-if="buyForm.criar_conta">
           <div><label class="label">Categoria financeira</label><Select v-model="buyForm.id_categoria" :options="activeExpenseCategories" optionLabel="nome" optionValue="id" showClear class="w-full" /></div>
-          <div><label class="label">Conta bancária *</label><Select v-model="buyForm.id_conta_bancaria" :options="bankAccounts" optionLabel="descricao" optionValue="id" class="w-full" /></div>
+          <div v-if="!buyUsesCreditCard"><label class="label">Conta bancária *</label><Select v-model="buyForm.id_conta_bancaria" :options="bankAccounts" optionLabel="descricao" optionValue="id" class="w-full" /></div>
           <div><label class="label">Forma de pagamento *</label><Select v-model="buyForm.id_forma_pagamento" :options="paymentForms" optionLabel="descricao" optionValue="id" class="w-full" /></div>
+          <template v-if="buyUsesCreditCard">
+            <div><label class="label">Cartão de crédito *</label><Select v-model="buyForm.id_cartao_credito" :options="creditCards" optionLabel="nome" optionValue="id" class="w-full" /></div>
+            <div><label class="label">Parcelas no cartão *</label><InputNumber v-model="buyForm.parcelas_cartao" :min="1" :max="selectedBuyCard?.limite_parcelas || 12" showButtons class="w-full" /></div>
+          </template>
         </template>
         <div class="full"><label class="label">Observação</label><Textarea v-model="buyForm.observacao" class="w-full" rows="3" /></div>
       </form>
@@ -767,7 +781,7 @@ onMounted(loadAll);
         <Message severity="info" :closable="false">A reserva é um piso protegido, não uma despesa mensal. Ela nunca é acumulada entre os meses.</Message>
         <div><label class="label">Reserva mínima</label><InputNumber v-model="settings.reserva_minima" mode="currency" currency="BRL" locale="pt-BR" class="w-full" :min="0" /></div>
         <div class="setting-toggle"><div><strong>Proteger reserva no planejamento</strong><small>Desative apenas para simulações sem saldo protegido.</small></div><ToggleSwitch v-model="settings.utilizar_reserva" trueValue="S" falseValue="N" /></div>
-        <div><label class="label">Horizonte padrão</label><Select v-model="settings.horizonte_meses" :options="horizonOptions" optionLabel="label" optionValue="value" class="w-full" /></div>
+        <div><label class="label">Horizonte mínimo</label><Select v-model="settings.horizonte_meses" :options="horizonOptions" optionLabel="label" optionValue="value" class="w-full" /><small>A projeção se estende até a última conta pendente cadastrada, mesmo em outro ano.</small></div>
       </div>
       <template #footer><Button label="Cancelar" severity="secondary" @click="settingsOpen = false" /><Button label="Salvar e recalcular" :loading="saving" @click="saveSettings" /></template>
     </Dialog>
