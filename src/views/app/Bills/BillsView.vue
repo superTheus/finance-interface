@@ -470,6 +470,25 @@ const removeFromCard = async (bill: Bills) => {
   }
 };
 
+const setCardPurchasePaid = async (bill: Bills, paid: boolean) => {
+  if (!bill.id || saving.value) return;
+  saving.value = true;
+  try {
+    await api.updateBills(bill.id, paid ? {
+      status: 'PA',
+      valor_pago: Number(bill.valor),
+      data_pagamento: moment().format('YYYY-MM-DD'),
+    } : { status: 'PE' });
+    toast.add({ severity: 'success', summary: paid ? 'Baixa da compra registrada' : 'Baixa da compra desfeita', life: 3000 });
+    await loadBills();
+    loadResumes();
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Erro ao atualizar a compra', detail: accountError(error), life: 4000 });
+  } finally {
+    saving.value = false;
+  }
+};
+
 const close = () => {
   showFilter.value = false;
 }
@@ -682,11 +701,18 @@ watch(bills, () => {
       });
     }
 
-    if (bill.origem_cartao === 'compra') items.push({
-      label: 'Retirar do cartão',
-      icon: 'pi pi-undo',
-      command: () => removeFromCard(bill),
-    });
+    if (bill.origem_cartao === 'compra') {
+      items.push({
+        label: bill.status === 'PA' ? 'Desfazer baixa da compra' : 'Dar baixa na compra',
+        icon: bill.status === 'PA' ? 'pi pi-undo' : 'pi pi-check-circle',
+        command: () => setCardPurchasePaid(bill, bill.status !== 'PA'),
+      });
+      if (bill.status === 'PE') items.push({
+        label: 'Retirar do cartão',
+        icon: 'pi pi-undo',
+        command: () => removeFromCard(bill),
+      });
+    }
 
     if (bill.origem_cartao !== 'fatura') items.push(
       {
@@ -839,8 +865,10 @@ loadAllData();
         </Column>
         <Column field="status" header="Situação">
           <template #body="slotProps">
-            <Badge :value="slotProps.data.origem_cartao === 'compra' ? 'Na fatura' : slotProps.data.status === 'PA' ? 'Pago' : 'Pendente'"
-              :severity="slotProps.data.origem_cartao === 'compra' ? 'info' : slotProps.data.status === 'PA' ? 'success' : 'danger'">
+            <Badge :value="slotProps.data.origem_cartao === 'compra'
+              ? slotProps.data.status === 'PA' ? 'Baixa no cartão' : 'Na fatura'
+              : slotProps.data.status === 'PA' ? 'Pago' : 'Pendente'"
+              :severity="slotProps.data.status === 'PA' ? 'success' : slotProps.data.origem_cartao === 'compra' ? 'info' : 'danger'">
             </Badge>
           </template>
         </Column>
