@@ -349,7 +349,8 @@ const createBill = () => {
 
 const paymentBill = (bill: Bills) => {
   saving.value = true;
-  if (!isCreditOnPayment.value && bill.origem_cartao !== 'fatura' && formPayment.value.valorPago > (bill.valor || 0)) {
+  const valorPago = Number(formPayment.value.valorPago);
+  if (!isCreditOnPayment.value && bill.origem_cartao !== 'fatura' && valorPago > Number(bill.valor || 0)) {
     toast.add({
       severity: 'error',
       summary: 'Erro',
@@ -359,7 +360,7 @@ const paymentBill = (bill: Bills) => {
     saving.value = false;
     return;
   }
-  if (!isCreditOnPayment.value && (!Number.isFinite(formPayment.value.valorPago) || formPayment.value.valorPago <= 0)) {
+  if (!isCreditOnPayment.value && (!Number.isFinite(valorPago) || valorPago <= 0)) {
     toast.add({ severity: 'warn', summary: 'Informe um valor pago maior que zero', life: 3000 });
     saving.value = false;
     return;
@@ -384,7 +385,7 @@ const paymentBill = (bill: Bills) => {
     update.status = 'PA';
     update.id_conta_bancaria = formPayment.value.bankAccount.id;
     update.data_pagamento = moment(formPayment.value.dataPagamento).format('YYYY-MM-DD');
-    update.valor_pago = formPayment.value.valorPago;
+    update.valor_pago = valorPago;
   }
 
   api.updateBills(bill.id || 0, update).then(() => {
@@ -672,7 +673,7 @@ watch(bills, () => {
         key: bill.id?.toString(),
         command: () => {
           accountToPay.value = { ...bill };
-          formPayment.value.valorPago = bill.valor;
+          formPayment.value.valorPago = Number(bill.valor);
           formPayment.value.formaPagamento = forms.value.find((payment) => payment.id === bill.id_forma_pagamento)
             || forms.value.find((payment) => payment.descricao !== 'CARTÃO DE CRÉDITO') || forms.value[0];
           accountSelected.value = bill;
