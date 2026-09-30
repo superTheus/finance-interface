@@ -5,11 +5,15 @@ import { Utils } from '@/services/utils';
 import { useUserStore } from '@/stores/user';
 import type { BankAccounts } from '@/types/types';
 import type { MenuItem } from 'primevue/menuitem';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { ref, watch } from 'vue';
 
 const user = useUserStore();
 const utils = new Utils();
 const api = new Api();
+const confirm = useConfirm();
+const toast = useToast();
 const bankAccounts = ref<BankAccounts[]>([]);
 const isEdit = ref(false);
 const isDialogVisible = ref(false);
@@ -51,13 +55,38 @@ watch(bankAccounts, (newValue) => {
           label: 'Excluir',
           icon: 'pi pi-trash',
           command: () => {
-            console.log('Excluir');
+            remove(item);
           }
         }
       ]
     };
   });
 });
+
+function remove(account: BankAccounts): void {
+  confirm.require({
+    header: 'Excluir conta bancária',
+    message: `Deseja excluir “${account.descricao}”?`,
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Excluir',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await api.deleteBankAccount(account.id);
+        toast.add({ severity: 'success', summary: 'Conta bancária excluída', life: 3000 });
+        loadBankAccounts();
+      } catch (error: any) {
+        toast.add({
+          severity: 'error',
+          summary: 'Erro ao excluir conta bancária',
+          detail: error?.response?.data?.message || 'Não foi possível excluir a conta bancária.',
+          life: 4000,
+        });
+      }
+    },
+  });
+}
 
 const setUpdatable = (data: BankAccounts) => {
   form.value = {

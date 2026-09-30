@@ -241,6 +241,10 @@ export class Api {
     })
   }
 
+  async deleteBankAccount(id: number): Promise<void> {
+    await this.instance.delete(`/private/contas-bancarias/excluir/${id}`);
+  }
+
   findCategories(filter: CategoriesRequest): Promise<{
     total: number,
     data: Categories[]
