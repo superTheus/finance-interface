@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { isAxiosError } from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { useUserStore } from '@/stores/user';
@@ -15,8 +15,21 @@ const api = new Api();
 const email = ref('');
 const pass = ref('');
 const showPass = ref(false);
+const showConfirmPass = ref(false);
 const loading = ref(false);
 const googleLoading = ref(false);
+const route = router.currentRoute;
+const registering = computed(() => route.value.name === 'registrar');
+const name = ref('');
+const confirmPass = ref('');
+const registerLoading = ref(false);
+
+watch(registering, () => {
+  pass.value = '';
+  confirmPass.value = '';
+  showPass.value = false;
+  showConfirmPass.value = false;
+});
 
 onMounted(() => {
   document.documentElement.classList.add('dark-mode');
@@ -66,6 +79,28 @@ const login = async () => {
   }
 };
 
+const register = async () => {
+  if (pass.value !== confirmPass.value) {
+    toast.add({ severity: 'error', summary: 'Confira a senha', detail: 'As senhas não coincidem.', life: 4500 });
+    return;
+  }
+
+  try {
+    registerLoading.value = true;
+    const data = await api.register({ nome: name.value.trim(), email: email.value.trim(), senha: pass.value });
+    userStore.setUser(data);
+    toast.add({ severity: 'success', summary: 'Conta criada', detail: 'Bem-vindo ao Orbitus!', life: 3000 });
+    router.push({ name: 'Dashboard' });
+  } catch (error: unknown) {
+    const message = isAxiosError(error)
+      ? error.response?.data?.message || 'Não foi possível criar a conta.'
+      : 'Não foi possível criar a conta.';
+    toast.add({ severity: 'error', summary: 'Cadastro não concluído', detail: message, life: 5000 });
+  } finally {
+    registerLoading.value = false;
+  }
+};
+
 const loginWithGoogle = async () => {
   try {
     googleLoading.value = true;
@@ -107,13 +142,57 @@ const loginWithGoogle = async () => {
         <img :src="logoDark" alt="Orbitus - suas financas, seu universo" class="brand-logo" />
 
         <div class="welcome-copy">
-          <p class="welcome-kicker">Bem-vindo de volta</p>
-          <h1>Entre para continuar sua jornada financeira.</h1>
+          <p class="welcome-kicker">{{ registering ? 'Comece sua jornada' : 'Bem-vindo de volta' }}</p>
+          <h1>{{ registering ? 'Crie sua conta e organize suas finanças.' : 'Entre para continuar sua jornada financeira.' }}</h1>
         </div>
       </div>
 
       <div class="auth-side">
-        <form class="login-form" @submit.prevent="login">
+        <form v-if="registering" class="login-form" @submit.prevent="register">
+          <div>
+            <label for="register-name" class="label">Nome</label>
+            <InputText id="register-name" v-model="name" name="name" autocomplete="name" required maxlength="150"
+              placeholder="Seu nome" class="auth-input" />
+          </div>
+          <div>
+            <label for="register-email" class="label">Email</label>
+            <InputText id="register-email" v-model="email" name="email" type="email" autocomplete="email" required maxlength="190"
+              placeholder="voce@email.com" class="auth-input" />
+          </div>
+          <div>
+            <label for="register-pass" class="label">Senha</label>
+            <InputGroup class="password-control">
+              <InputText id="register-pass" v-model="pass" name="password" :type="showPass ? 'text' : 'password'"
+                autocomplete="new-password" required minlength="8" maxlength="72"
+                placeholder="Pelo menos 8 caracteres" class="password-input" />
+              <InputGroupAddon class="password-addon">
+                <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
+                  :aria-pressed="showPass" @click="changePassView">
+                  <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+                </button>
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+          <div>
+            <label for="register-confirm" class="label">Confirme a senha</label>
+            <InputGroup class="password-control">
+              <InputText id="register-confirm" v-model="confirmPass" name="confirm-password"
+                :type="showConfirmPass ? 'text' : 'password'" autocomplete="new-password" required minlength="8" maxlength="72"
+                placeholder="Digite a senha novamente" class="password-input" />
+              <InputGroupAddon class="password-addon">
+                <button type="button" class="password-toggle"
+                  :aria-label="showConfirmPass ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'"
+                  :aria-pressed="showConfirmPass" @click="showConfirmPass = !showConfirmPass">
+                  <i :class="showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+                </button>
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+          <Button type="submit" label="Criar conta" icon="pi pi-user-plus" class="w-full submit-button"
+            :loading="registerLoading" />
+          <p class="auth-switch">Já tem conta? <RouterLink to="/">Entrar</RouterLink></p>
+        </form>
+        <form v-else class="login-form" @submit.prevent="login">
           <div>
             <label for="email" class="label">Email</label>
             <InputText
@@ -129,7 +208,7 @@ const loginWithGoogle = async () => {
 
           <div>
             <label for="pass" class="label">Senha</label>
-            <div class="password-control">
+            <InputGroup class="password-control">
               <InputText
                 id="pass"
                 v-model="pass"
@@ -139,15 +218,13 @@ const loginWithGoogle = async () => {
                 autocomplete="current-password"
                 class="password-input"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                aria-label="Alternar visibilidade da senha"
-                @click="changePassView"
-              >
-                <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-              </button>
-            </div>
+              <InputGroupAddon class="password-addon">
+                <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
+                  :aria-pressed="showPass" @click="changePassView">
+                  <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+                </button>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full submit-button" :loading="loading" />
@@ -156,6 +233,7 @@ const loginWithGoogle = async () => {
             <Button type="button" label="Entrar com Google" icon="pi pi-google" severity="secondary"
               class="w-full" :loading="googleLoading" :disabled="loading" @click="loginWithGoogle" />
           </div>
+          <p class="auth-switch">Ainda não tem conta? <RouterLink to="/registrar">Registra-se aqui</RouterLink></p>
         </form>
       </div>
     </section>
@@ -165,6 +243,8 @@ const loginWithGoogle = async () => {
 <style scoped lang="scss">
 .google-login { display: grid; gap: .75rem; text-align: center; }
 .google-login span { color: var(--app-text-muted); }
+.auth-switch { margin: 0; text-align: center; color: var(--app-text-muted); }
+.auth-switch a { color: var(--orbit-cyan); font-weight: 700; text-decoration: underline; }
 .home-page {
   position: relative;
   display: grid;
@@ -408,6 +488,13 @@ const loginWithGoogle = async () => {
   background: transparent !important;
   box-shadow: none !important;
   color: #ffffff !important;
+}
+
+:deep(.password-addon) {
+  flex: 0 0 3.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .password-toggle {

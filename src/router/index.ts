@@ -28,6 +28,12 @@ const router = createRouter({
       }
     },
     {
+      path: '/registrar',
+      name: 'registrar',
+      component: HomeView,
+      beforeEnter: () => isAuthenticated() ? '/app' : true,
+    },
+    {
       path: '/app',
       name: 'app',
       component: AppView,

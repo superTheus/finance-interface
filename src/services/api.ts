@@ -40,6 +40,11 @@ export class Api {
     return response.data;
   }
 
+  async register(data: { nome: string; email: string; senha: string }): Promise<User> {
+    const response = await this.instance.post<User>('/registrar', data);
+    return response.data;
+  }
+
   async loginWithGoogle(params: { code: string; code_verifier: string; redirect_uri: string }): Promise<User> {
     try {
       const response = await this.instance.post('/login-google', params);
@@ -94,7 +99,7 @@ export class Api {
   createUser(user: PartialUser): Promise<User> {
     return new Promise<User>(async (resolve, reject) => {
       try {
-        const response = await this.instance.post('/root/usuarios/criar', user);
+        const response = await this.instance.post('/registrar', user);
 
         resolve(response.data);
       } catch (error: any) {
