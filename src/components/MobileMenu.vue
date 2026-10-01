@@ -45,7 +45,7 @@ const isActive = (path: string) => route.path === `/app/${path}`;
 
     <button type="button" :class="['mobile-profile', { active: isActive('profile') }]" @click="navigateTo('profile')">
       <UserAvatar :name="userStore.user?.nome || 'Usuário'" :photo="userStore.user?.foto" />
-      <span><strong :title="userStore.user?.nome">{{ userStore.user?.nome || 'Usuário' }}</strong><small :title="userStore.user?.email">{{ userStore.user?.email }}</small></span>
+      <span class="mobile-profile-details"><strong :title="userStore.user?.nome">{{ userStore.user?.nome || 'Usuário' }}</strong><small :title="userStore.user?.email">{{ userStore.user?.email }}</small></span>
       <i class="pi pi-chevron-right"></i>
     </button>
 
@@ -136,7 +136,7 @@ const isActive = (path: string) => route.path === `/app/${path}`;
 
 .mobile-profile { display: flex; align-items: center; width: 100%; gap: .65rem; padding: .65rem; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-soft); color: var(--app-text); text-align: left; cursor: pointer; }
 .mobile-profile.active { border-color: var(--orbit-purple); }
-.mobile-profile span { display: grid; min-width: 0; flex: 1; gap: .1rem; }
+.mobile-profile-details { display: grid; min-width: 0; flex: 1; gap: .1rem; }
 .mobile-profile strong, .mobile-profile small { overflow-wrap: anywhere; }
 .mobile-profile small { color: var(--app-text-muted); font-size: .72rem; }
 .mobile-profile > i { color: var(--app-text-muted); font-size: .75rem; }

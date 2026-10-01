@@ -245,6 +245,10 @@ export class Api {
     await this.instance.delete(`/private/contas-bancarias/excluir/${id}`);
   }
 
+  async transferBankBalance(data: { id_origem: number; id_destino: number; valor: number }): Promise<void> {
+    await this.instance.post('/private/contas-bancarias/transferir', data);
+  }
+
   findCategories(filter: CategoriesRequest): Promise<{
     total: number,
     data: Categories[]

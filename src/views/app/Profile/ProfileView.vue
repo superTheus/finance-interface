@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UserAvatar from '@/components/UserAvatar.vue';
+import ProfilePhotoCropper from '@/components/ProfilePhotoCropper.vue';
 import { Api } from '@/services/api';
 import { useUserStore } from '@/stores/user';
 import type { UserProfile } from '@/types/types';
@@ -16,6 +17,8 @@ const loading = ref(false);
 const savingDetails = ref(false);
 const savingPassword = ref(false);
 const uploadingPhoto = ref(false);
+const selectedPhoto = ref<File | null>(null);
+const cropDialogVisible = ref(false);
 
 function updateSession(profile: UserProfile): void {
   if (!userStore.user) return;
@@ -80,7 +83,7 @@ async function savePassword(): Promise<void> {
   }
 }
 
-async function selectPhoto(event: Event): Promise<void> {
+function selectPhoto(event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
@@ -89,15 +92,28 @@ async function selectPhoto(event: Event): Promise<void> {
     input.value = '';
     return;
   }
+  selectedPhoto.value = file;
+  cropDialogVisible.value = true;
+  input.value = '';
+}
+
+function cancelCrop(): void {
+  if (uploadingPhoto.value) return;
+  cropDialogVisible.value = false;
+  selectedPhoto.value = null;
+}
+
+async function uploadCroppedPhoto(file: File): Promise<void> {
   uploadingPhoto.value = true;
   try {
     updateSession(await api.uploadProfilePhoto(file));
+    cropDialogVisible.value = false;
+    selectedPhoto.value = null;
     toast.add({ severity: 'success', summary: 'Foto atualizada', life: 3000 });
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Erro ao enviar foto', detail: message(error), life: 4500 });
   } finally {
     uploadingPhoto.value = false;
-    input.value = '';
   }
 }
 </script>
@@ -154,6 +170,8 @@ async function selectPhoto(event: Event): Promise<void> {
         </Card>
       </div>
     </div>
+    <ProfilePhotoCropper :file="selectedPhoto" :visible="cropDialogVisible" :uploading="uploadingPhoto"
+      @cancel="cancelCrop" @save="uploadCroppedPhoto" />
   </section>
 </template>
 

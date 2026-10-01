@@ -113,11 +113,14 @@ const loginWithGoogle = async () => {
     userStore.setUser(data);
     toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Login efetuado com Google', life: 3000 });
     router.push({ name: 'Dashboard' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const detail = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+      ? error.message
+      : 'Não foi possível entrar com Google.';
     toast.add({
       severity: 'error',
       summary: 'Erro no login com Google',
-      detail: error?.message || 'Não foi possível entrar com Google.',
+      detail,
       life: 4000,
     });
   } finally {
@@ -161,32 +164,28 @@ const loginWithGoogle = async () => {
           </div>
           <div>
             <label for="register-pass" class="label">Senha</label>
-            <InputGroup class="password-control">
+            <div class="password-control">
               <InputText id="register-pass" v-model="pass" name="password" :type="showPass ? 'text' : 'password'"
                 autocomplete="new-password" required minlength="8" maxlength="72"
                 placeholder="Pelo menos 8 caracteres" class="password-input" />
-              <InputGroupAddon class="password-addon">
-                <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
-                  :aria-pressed="showPass" @click="changePassView">
-                  <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
+              <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
+                :aria-pressed="showPass" @click="changePassView">
+                <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
           <div>
             <label for="register-confirm" class="label">Confirme a senha</label>
-            <InputGroup class="password-control">
+            <div class="password-control">
               <InputText id="register-confirm" v-model="confirmPass" name="confirm-password"
                 :type="showConfirmPass ? 'text' : 'password'" autocomplete="new-password" required minlength="8" maxlength="72"
                 placeholder="Digite a senha novamente" class="password-input" />
-              <InputGroupAddon class="password-addon">
-                <button type="button" class="password-toggle"
-                  :aria-label="showConfirmPass ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'"
-                  :aria-pressed="showConfirmPass" @click="showConfirmPass = !showConfirmPass">
-                  <i :class="showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
+              <button type="button" class="password-toggle"
+                :aria-label="showConfirmPass ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'"
+                :aria-pressed="showConfirmPass" @click="showConfirmPass = !showConfirmPass">
+                <i :class="showConfirmPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
           <Button type="submit" label="Criar conta" icon="pi pi-user-plus" class="w-full submit-button"
             :loading="registerLoading" />
@@ -208,7 +207,7 @@ const loginWithGoogle = async () => {
 
           <div>
             <label for="pass" class="label">Senha</label>
-            <InputGroup class="password-control">
+            <div class="password-control">
               <InputText
                 id="pass"
                 v-model="pass"
@@ -218,13 +217,11 @@ const loginWithGoogle = async () => {
                 autocomplete="current-password"
                 class="password-input"
               />
-              <InputGroupAddon class="password-addon">
-                <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
-                  :aria-pressed="showPass" @click="changePassView">
-                  <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
+              <button type="button" class="password-toggle" :aria-label="showPass ? 'Ocultar senha' : 'Mostrar senha'"
+                :aria-pressed="showPass" @click="changePassView">
+                <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
 
           <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full submit-button" :loading="loading" />
@@ -460,8 +457,7 @@ const loginWithGoogle = async () => {
 }
 
 .password-control {
-  display: flex;
-  align-items: center;
+  position: relative;
   width: 100%;
   height: 3.2rem;
   overflow: hidden;
@@ -480,9 +476,9 @@ const loginWithGoogle = async () => {
 }
 
 :deep(.password-input) {
-  flex: 1 1 auto;
   width: 100%;
   height: 100%;
+  padding-right: 3.2rem !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -490,21 +486,15 @@ const loginWithGoogle = async () => {
   color: #ffffff !important;
 }
 
-:deep(.password-addon) {
-  flex: 0 0 3.2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
 .password-toggle {
   display: grid;
   place-items: center;
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 3.2rem;
   height: 100%;
-  flex: 0 0 3.2rem;
   border: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(247, 247, 251, 0.64);
   background: transparent;
   cursor: pointer;
@@ -515,8 +505,9 @@ const loginWithGoogle = async () => {
 
 .password-toggle:hover {
   color: #ffffff;
-  background: rgba(108, 92, 231, 0.18);
 }
+
+.password-toggle:focus-visible { outline: 2px solid var(--orbit-cyan); outline-offset: -4px; border-radius: var(--app-radius); }
 
 .password-toggle i {
   font-size: 1.05rem;

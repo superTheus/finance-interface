@@ -7,7 +7,7 @@ import type { BankAccounts } from '@/types/types';
 import type { MenuItem } from 'primevue/menuitem';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const user = useUserStore();
 const utils = new Utils();
@@ -18,6 +18,19 @@ const bankAccounts = ref<BankAccounts[]>([]);
 const isEdit = ref(false);
 const isDialogVisible = ref(false);
 const accountSelected = ref<BankAccounts | null>(null);
+const isTransferDialogVisible = ref(false);
+const isTransferring = ref(false);
+const transferOrigin = ref<BankAccounts | null>(null);
+const transferDestinationId = ref<number | null>(null);
+const transferAmount = ref<number | null>(null);
+const destinationAccounts = computed(() => bankAccounts.value.filter(account => account.id !== transferOrigin.value?.id));
+const canTransfer = computed(() =>
+  !!transferOrigin.value && !!transferDestinationId.value &&
+  transferAmount.value !== null && Number.isFinite(transferAmount.value) &&
+  transferAmount.value > 0 &&
+  Math.abs(transferAmount.value * 100 - Math.round(transferAmount.value * 100)) < 0.000001 &&
+  transferAmount.value <= Number(transferOrigin.value.saldo)
+);
 const form = ref({
   descricao: '',
   saldo: 0,
@@ -45,6 +58,12 @@ watch(bankAccounts, (newValue) => {
       data: item,
       items: [
         {
+          label: 'Transferir saldo',
+          icon: 'pi pi-arrow-right-arrow-left',
+          disabled: newValue.length < 2 || Number(item.saldo) <= 0,
+          command: () => openTransfer(item)
+        },
+        {
           label: 'Editar',
           icon: 'pi pi-pencil',
           command: () => {
@@ -62,6 +81,38 @@ watch(bankAccounts, (newValue) => {
     };
   });
 });
+
+function openTransfer(account: BankAccounts): void {
+  transferOrigin.value = account;
+  transferDestinationId.value = null;
+  transferAmount.value = null;
+  isTransferDialogVisible.value = true;
+}
+
+async function transferBalance(): Promise<void> {
+  if (!canTransfer.value || !transferOrigin.value || !transferDestinationId.value || transferAmount.value === null) return;
+
+  isTransferring.value = true;
+  try {
+    await api.transferBankBalance({
+      id_origem: transferOrigin.value.id,
+      id_destino: transferDestinationId.value,
+      valor: transferAmount.value,
+    });
+    isTransferDialogVisible.value = false;
+    loadBankAccounts();
+    toast.add({ severity: 'success', summary: 'Transferência realizada', life: 3000 });
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro ao transferir saldo',
+      detail: error?.response?.data?.message || 'Não foi possível realizar a transferência.',
+      life: 4000,
+    });
+  } finally {
+    isTransferring.value = false;
+  }
+}
 
 function remove(account: BankAccounts): void {
   confirm.require({
@@ -196,6 +247,33 @@ loadBankAccounts();
       <div class="dialog-footer-actions mt-4">
         <Button label="Cancelar" severity="secondary" outlined @click="isDialogVisible = false" />
         <Button label="Salvar" class="p-button-primary" @click="isEdit ? update() : create()" />
+      </div>
+    </template>
+  </Dialog>
+
+  <Dialog header="Transferir saldo" :visible="isTransferDialogVisible" modal :closable="!isTransferring" class="bank-dialog"
+    @update:visible="isTransferDialogVisible = $event">
+    <div class="p-fluid form-section">
+      <div class="p-field flex flex-column gap-1">
+        <label>Conta de origem</label>
+        <div>{{ transferOrigin?.descricao }} · {{ utils.formatCurrency(transferOrigin?.saldo || 0) }} disponíveis</div>
+      </div>
+      <div class="p-field flex flex-column gap-1 mt-3">
+        <label for="transfer-destination">Conta de destino</label>
+        <Select id="transfer-destination" v-model="transferDestinationId" :options="destinationAccounts"
+          optionLabel="descricao" optionValue="id" placeholder="Selecione a conta" class="w-full" />
+      </div>
+      <div class="p-field flex flex-column gap-1 mt-3">
+        <label for="transfer-amount">Valor</label>
+        <InputNumber id="transfer-amount" v-model="transferAmount" mode="currency" currency="BRL" locale="pt-BR"
+          :min="0.01" :max="Number(transferOrigin?.saldo || 0)" fluid />
+      </div>
+    </div>
+    <template #footer>
+      <div class="dialog-footer-actions mt-4">
+        <Button label="Cancelar" severity="secondary" outlined :disabled="isTransferring" @click="isTransferDialogVisible = false" />
+        <Button label="Transferir" icon="pi pi-arrow-right-arrow-left" :loading="isTransferring"
+          :disabled="!canTransfer || isTransferring" @click="transferBalance" />
       </div>
     </template>
   </Dialog>
