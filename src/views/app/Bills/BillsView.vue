@@ -137,7 +137,12 @@ const items = ref<{
 const availableCategories = computed(() => categories.value.filter((category) =>
   category.ativo === 'S' && [formAccount.value.tipo, 'A'].includes(category.tipo)
 ));
-const isCreditPayment = computed(() => formAccount.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
+const isInvoiceEdit = computed(() => isEditMode.value && accountToEdit.value?.origem_cartao === 'fatura');
+const accountPaymentForms = computed(() => formAccount.value.tipo === 'R' || isInvoiceEdit.value
+  ? forms.value.filter((form) => form.descricao !== 'CARTÃO DE CRÉDITO')
+  : forms.value
+);
+const isCreditPayment = computed(() => !isInvoiceEdit.value && formAccount.value.formaPagamento?.descricao === 'CARTÃO DE CRÉDITO');
 const accountInstallmentOptions = computed(() => Array.from(
   { length: formAccount.value.creditCard?.limite_parcelas ?? 0 },
   (_, index) => ({ label: `${index + 1}x`, value: index + 1 })
@@ -409,6 +414,14 @@ const updateBill = () => {
       detail: 'Nenhuma conta selecionada',
       life: 3000
     });
+    saving.value = false;
+    return;
+  }
+
+  if (isInvoiceEdit.value && (!formAccount.value.titulo.trim() || formAccount.value.titulo.trim().length > 100
+    || !Number.isFinite(formAccount.value.valor) || formAccount.value.valor <= 0
+    || !formAccount.value.vencimento || !moment(formAccount.value.vencimento).isValid())) {
+    toast.add({ severity: 'warn', summary: 'Confira os dados da fatura', detail: 'Informe título, valor maior que zero e vencimento válido.', life: 4000 });
     saving.value = false;
     return;
   }
@@ -714,7 +727,7 @@ watch(bills, () => {
       });
     }
 
-    if (bill.origem_cartao !== 'fatura') items.push(
+    items.push(
       {
         label: 'Editar',
         icon: 'pi pi-pencil',
@@ -726,7 +739,7 @@ watch(bills, () => {
 
           formAccount.value.tipo = bill.tipo;
           formAccount.value.titulo = bill.titulo;
-          formAccount.value.valor = bill.valor;
+          formAccount.value.valor = Number(bill.valor);
           formAccount.value.vencimento = moment(bill.vencimento as string).toDate();
           formAccount.value.descricao = bill.descricao || '';
           formAccount.value.category = categories.value.find((category) => category.id === bill.id_categoria);
@@ -735,7 +748,10 @@ watch(bills, () => {
           formAccount.value.cardInstallments = bill.parcelas_cartao || 1;
           formAccount.value.dataCompra = moment(bill.data_compra || bill.vencimento as string).toDate();
         }
-      },
+      }
+    );
+
+    if (bill.origem_cartao !== 'fatura') items.push(
       {
         label: 'Excluir',
         icon: 'pi pi-trash',
@@ -1128,12 +1144,13 @@ loadAllData();
       </Stepper>
 
       <div v-if="isEditMode">
+        <p v-if="isInvoiceEdit" class="mt-3">Os campos de título, valor e vencimento alterados aqui serão mantidos nos próximos recálculos da fatura.</p>
         <div class="form-section form-grid">
           <FloatLabel class="mt-4 w-full full">
             <Select v-model="formAccount.tipo" :options="[
               { name: 'Despesa', value: 'D' },
               { name: 'Receita', value: 'R' },
-            ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" />
+            ]" optionLabel="name" optionValue="value" placeholder="Selecione" class="w-full" :disabled="isInvoiceEdit" />
             <label for="titulo">Tipo de Conta</label>
           </FloatLabel>
 
@@ -1145,13 +1162,13 @@ loadAllData();
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full full">
-            <InputText id="titulo" v-model="formAccount.titulo" class="w-full" />
+            <InputText id="titulo" v-model="formAccount.titulo" class="w-full" :maxlength="isInvoiceEdit ? 100 : undefined" :required="isInvoiceEdit" />
             <label for="titulo">Título</label>
           </FloatLabel>
 
           <FloatLabel class="mt-4 w-full">
             <InputNumber id="valor" v-model="formAccount.valor" class="w-full" :minFractionDigits="2"
-              :maxFractionDigits="2" fluid />
+              :maxFractionDigits="2" :min="isInvoiceEdit ? 0.01 : undefined" fluid />
             <label for="valor">Valor</label>
           </FloatLabel>
 
@@ -1162,7 +1179,7 @@ loadAllData();
 
           <div class="full">
             <label class="label" for="forma-pagamento-edicao">Forma de pagamento (opcional)</label>
-            <Select inputId="forma-pagamento-edicao" v-model="formAccount.formaPagamento" :options="formAccount.tipo === 'R' ? forms.filter(form => form.descricao !== 'CARTÃO DE CRÉDITO') : forms"
+            <Select inputId="forma-pagamento-edicao" v-model="formAccount.formaPagamento" :options="accountPaymentForms"
               optionLabel="descricao" showClear placeholder="Definir antes da baixa" class="w-full" />
           </div>
 
